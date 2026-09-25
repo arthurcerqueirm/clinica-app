@@ -90,6 +90,20 @@ npm run db:types
    `SUPABASE_SERVICE_ROLE_KEY` (em Project Settings → API) para o `.env.local`
    (dev) e para as variáveis de ambiente da Vercel (produção)
 
+## Mantendo o Supabase free tier "acordado"
+
+O plano free do Supabase pausa o projeto inteiro após 7 dias sem atividade de
+banco (ver PLANO.md §2.3). Pra não precisar do plano Pro só por causa disso,
+`app/api/keep-alive/route.ts` faz uma query trivial (`select` em `configuracoes`)
+e é chamada 1x/dia por um Cron Job da Vercel (`vercel.json`) — suficiente pra
+contar como atividade e nunca pausar, mesmo se ninguém abrir o app.
+
+Pra ativar em produção: gerar uma string aleatória (`openssl rand -hex 16`) e
+colar como env var `CRON_SECRET` no projeto na Vercel — ela mesma injeta esse
+valor como `Authorization: Bearer <CRON_SECRET>` nas chamadas do Cron Job, sem
+precisar fazer mais nada. Sem essa env var, a rota não faz essa checagem (ok
+em dev/local, onde não tem Cron chamando).
+
 ## Notificações push (Web Push)
 
 As chaves VAPID já estão geradas e no `.env.local`/`.env.example`. Para gerar um novo

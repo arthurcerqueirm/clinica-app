@@ -3,12 +3,13 @@
 import { motion, type HTMLMotionProps } from "motion/react";
 import { forwardRef } from "react";
 import { cn } from "@/lib/cn";
+import { toque } from "@/lib/motion";
 
 const variantes = {
-  primary: "bg-primary text-bg",
+  primary: "bg-primary text-bg shadow-(--shadow-md)",
   secondary: "bg-surface-alt text-text border border-border",
   ghost: "bg-transparent text-text",
-  danger: "bg-danger text-bg",
+  danger: "bg-danger text-bg shadow-(--shadow-md)",
 } as const;
 
 type ButtonProps = Omit<HTMLMotionProps<"button">, "ref"> & {
@@ -21,9 +22,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <motion.button
         ref={ref}
         whileTap={{ scale: 0.96 }}
-        transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+        transition={toque}
         className={cn(
-          "no-select inline-flex min-h-11 items-center justify-center rounded-xl px-5 text-[15px] font-medium shadow-(--shadow-sm) disabled:opacity-50",
+          "no-select inline-flex min-h-12 items-center justify-center rounded-full px-6 text-[15px] font-semibold disabled:opacity-50",
           variantes[variante],
           className,
         )}

@@ -45,7 +45,7 @@ export function AgendamentoCard({ agendamento }: { agendamento: AgendamentoDoDia
 
   return (
     <div className="relative mx-4 my-1.5">
-      <div className="absolute inset-0 flex items-center justify-between rounded-xl bg-surface-alt px-5">
+      <div className="absolute inset-0 flex items-center justify-between rounded-2xl bg-success/10 px-5">
         <motion.div style={{ opacity: opacidadeWhatsapp }} className="text-success">
           <MessageCircle size={20} />
         </motion.div>
@@ -59,10 +59,13 @@ export function AgendamentoCard({ agendamento }: { agendamento: AgendamentoDoDia
         drag={encerrado ? false : "x"}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.5}
+        dragDirectionLock
+        dragTransition={{ bounceStiffness: 500, bounceDamping: 30 }}
+        whileTap={{ scale: 0.98 }}
         style={{ x }}
         onDragEnd={aoSoltarArraste}
         onClick={() => setAcoesAbertas(true)}
-        className="relative flex w-full items-start gap-3 rounded-xl border border-border bg-surface p-3 text-left shadow-(--shadow-sm)"
+        className="relative flex w-full touch-pan-y items-start gap-3 rounded-2xl border border-border bg-surface p-3.5 text-left shadow-(--shadow-sm)"
       >
         <span
           className="mt-0.5 h-full min-h-10 w-1 shrink-0 rounded-full"

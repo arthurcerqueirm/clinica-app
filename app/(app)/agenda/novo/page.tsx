@@ -1,3 +1,4 @@
+import { Tela } from "@/components/ui/tela";
 import { PageHeader } from "@/components/ui/page-header";
 import { NovoAgendamentoWizard } from "@/components/agenda/novo-agendamento-wizard";
 import { createClient } from "@/lib/supabase/server";
@@ -32,7 +33,7 @@ export default async function NovoAgendamentoPage({
   ]);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <Tela>
       <PageHeader titulo="Novo agendamento" voltarPara="/agenda" />
       <NovoAgendamentoWizard
         clientes={clientes ?? []}
@@ -41,6 +42,6 @@ export default async function NovoAgendamentoPage({
         horarioSugerido={horarioSugerido}
         dataInicial={dataInicial}
       />
-    </div>
+    </Tela>
   );
 }

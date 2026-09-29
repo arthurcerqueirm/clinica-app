@@ -1,14 +1,8 @@
 "use client";
 
-import { Drawer } from "vaul";
 import Link from "next/link";
-import {
-  CalendarPlus,
-  UserPlus,
-  Receipt,
-  HandCoins,
-  type LucideIcon,
-} from "lucide-react";
+import { CalendarPlus, UserPlus, Receipt, HandCoins, type LucideIcon } from "lucide-react";
+import { Sheet } from "@/components/ui/sheet";
 
 const acoes: { href: string; label: string; icone: LucideIcon }[] = [
   { href: "/agenda/novo", label: "Novo agendamento", icone: CalendarPlus },
@@ -25,29 +19,24 @@ export function QuickActionsSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   return (
-    <Drawer.Root open={open} onOpenChange={onOpenChange}>
-      <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-surface pb-[calc(env(safe-area-inset-bottom)+1rem)] outline-none">
-          <div className="mx-auto mt-3 h-1.5 w-10 rounded-full bg-border" />
-          <Drawer.Title className="px-6 pt-4 pb-2 text-base font-semibold text-text">
-            Ação rápida
-          </Drawer.Title>
-          <nav className="flex flex-col px-2 pb-2">
-            {acoes.map((acao) => (
-              <Link
-                key={acao.href}
-                href={acao.href}
-                onClick={() => onOpenChange(false)}
-                className="flex items-center gap-3 rounded-xl px-4 py-3.5 text-[15px] text-text active:bg-surface-alt"
-              >
-                <acao.icone size={20} className="text-primary" />
-                {acao.label}
-              </Link>
-            ))}
-          </nav>
-        </Drawer.Content>
-      </Drawer.Portal>
-    </Drawer.Root>
+    <Sheet aberto={open} onOpenChange={onOpenChange} titulo="Ação rápida">
+      <nav className="grid grid-cols-2 gap-2.5">
+        {acoes.map((acao, indice) => (
+          <Link
+            key={acao.href}
+            href={acao.href}
+            transitionTypes={["avancar"]}
+            onClick={() => onOpenChange(false)}
+            style={{ "--i": indice + 1 } as React.CSSProperties}
+            className="surgir pressable flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface-alt/60 p-4 text-[15px] font-medium text-text active:bg-surface-alt"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-soft text-primary">
+              <acao.icone size={20} />
+            </span>
+            {acao.label}
+          </Link>
+        ))}
+      </nav>
+    </Sheet>
   );
 }

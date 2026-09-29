@@ -2,22 +2,25 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, Package, Cake, UserPlus } from "lucide-react";
+import { Search, Package, UserPlus, ChevronRight, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { Chip } from "@/components/ui/chip";
+import { Grupo } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PlaceholderScreen } from "@/components/ui/placeholder-screen";
 import { formatarCentavos } from "@/lib/dinheiro";
 import { formatarData } from "@/lib/datas";
 import { normalizarTexto } from "@/lib/texto";
+import { toque } from "@/lib/motion";
 import type { ClienteComResumo } from "@/lib/data/clientes";
 
-type Filtro = "todos" | "devendo" | "pacote" | "inativos" | "aniversariantes";
+type Filtro = "todos" | "devendo" | "pacote" | "inativos";
 
 const FILTROS: { valor: Filtro; label: string }[] = [
   { valor: "todos", label: "Todos" },
   { valor: "devendo", label: "Devendo" },
   { valor: "pacote", label: "Com pacote ativo" },
   { valor: "inativos", label: "Inativos há 60d" },
-  { valor: "aniversariantes", label: "Aniversariantes" },
 ];
 
 const SESSENTA_DIAS_MS = 60 * 24 * 60 * 60 * 1000;
@@ -33,7 +36,6 @@ export function ClientesList({ clientes }: { clientes: ClienteComResumo[] }) {
     return clientes.filter((cliente) => {
       if (filtro === "devendo" && cliente.saldoDevedor <= 0) return false;
       if (filtro === "pacote" && !cliente.temPacoteAtivo) return false;
-      if (filtro === "aniversariantes" && !cliente.aniversarianteHoje) return false;
       if (filtro === "inativos") {
         const inativo =
           !cliente.ultimoAtendimento ||
@@ -56,26 +58,67 @@ export function ClientesList({ clientes }: { clientes: ClienteComResumo[] }) {
 
   const grupos = useMemo(() => agruparPorLetra(clientesFiltrados), [clientesFiltrados]);
 
+  if (clientes.length === 0) {
+    return (
+      <PlaceholderScreen
+        icone={UserPlus}
+        titulo="Nenhuma cliente cadastrada"
+        descricao="Cadastre a primeira cliente para começar a usar a agenda."
+      >
+        <Link
+          href="/clientes/novo"
+          transitionTypes={["avancar"]}
+          className="pressable inline-flex rounded-full bg-primary px-6 py-3 text-[15px] font-semibold text-bg shadow-(--shadow-md)"
+        >
+          Cadastrar cliente
+        </Link>
+      </PlaceholderScreen>
+    );
+  }
+
+  let indice = 0;
+
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex flex-col gap-3 px-4 pb-3 pt-3">
-        <div className="relative">
+      <div className="flex flex-col gap-3 px-4 pb-2 pt-1">
+        <div className="surgir relative">
           <Search
             size={18}
-            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
+            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
           />
           <Input
+            type="search"
             placeholder="Buscar por nome ou telefone"
             value={busca}
             onChange={(event) => setBusca(event.target.value)}
-            className="pl-10"
+            className="rounded-full pl-11 pr-11"
           />
+          <AnimatePresence>
+            {busca && (
+              <motion.button
+                type="button"
+                aria-label="Limpar busca"
+                onClick={() => setBusca("")}
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                transition={toque}
+                className="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-surface-alt text-text-muted"
+              >
+                <X size={14} />
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
 
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        <div
+          className="surgir -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none"
+          style={{ "--i": 1 } as React.CSSProperties}
+        >
           {FILTROS.map((item) => (
             <Chip
               key={item.valor}
+              grupo="filtro-clientes"
               ativo={filtro === item.valor}
               onClick={() => setFiltro(item.valor)}
             >
@@ -85,22 +128,22 @@ export function ClientesList({ clientes }: { clientes: ClienteComResumo[] }) {
         </div>
       </div>
 
-      {clientes.length === 0 ? (
-        <EstadoVazioGeral />
-      ) : grupos.length === 0 ? (
-        <p className="px-4 py-16 text-center text-sm text-text-muted">
+      {grupos.length === 0 ? (
+        <p className="surgir px-4 py-16 text-center text-sm text-text-muted">
           Nenhuma cliente encontrada.
         </p>
       ) : (
-        <div className="flex-1 pb-4">
+        <div key={filtro} className="flex flex-col pb-4">
           {grupos.map(([letra, itens]) => (
             <div key={letra}>
-              <div className="sticky top-0 z-10 bg-bg px-4 py-1.5 text-[13px] font-semibold text-text-muted">
+              <div className="sticky top-15 z-10 bg-bg/85 px-5 pt-3 pb-1.5 text-[13px] font-bold text-primary backdrop-blur-xl">
                 {letra}
               </div>
-              {itens.map((cliente) => (
-                <ClienteRow key={cliente.id} cliente={cliente} />
-              ))}
+              <Grupo indice={indice++}>
+                {itens.map((cliente) => (
+                  <ClienteRow key={cliente.id} cliente={cliente} />
+                ))}
+              </Grupo>
             </div>
           ))}
         </div>
@@ -113,6 +156,7 @@ function ClienteRow({ cliente }: { cliente: ClienteComResumo }) {
   return (
     <Link
       href={`/clientes/${cliente.id}`}
+      transitionTypes={["avancar"]}
       className="flex items-center gap-3 px-4 py-3 active:bg-surface-alt"
     >
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[15px] font-semibold text-primary">
@@ -120,7 +164,7 @@ function ClienteRow({ cliente }: { cliente: ClienteComResumo }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-medium text-text">{cliente.nome}</p>
+        <p className="truncate text-[15px] font-semibold text-text">{cliente.nome}</p>
         <p className="truncate text-[13px] text-text-muted">
           {cliente.ultimoAtendimento
             ? `Última visita: ${formatarData(cliente.ultimoAtendimento)}`
@@ -129,35 +173,15 @@ function ClienteRow({ cliente }: { cliente: ClienteComResumo }) {
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
-        {cliente.aniversarianteHoje && <Cake size={16} className="text-accent" />}
         {cliente.temPacoteAtivo && <Package size={16} className="text-primary" />}
         {cliente.saldoDevedor > 0 && (
-          <span className="rounded-full bg-danger/10 px-2 py-1 text-[12px] font-medium text-danger">
+          <span className="rounded-full bg-danger/10 px-2.5 py-1 text-[12px] font-semibold text-danger">
             {formatarCentavos(cliente.saldoDevedor)}
           </span>
         )}
+        <ChevronRight size={17} className="text-text-muted/60" />
       </div>
     </Link>
-  );
-}
-
-function EstadoVazioGeral() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-16 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft text-primary">
-        <UserPlus size={26} />
-      </div>
-      <h2 className="text-lg font-semibold text-text">Nenhuma cliente cadastrada</h2>
-      <p className="max-w-xs text-sm text-text-muted">
-        Cadastre a primeira cliente para começar a usar a agenda.
-      </p>
-      <Link
-        href="/clientes/novo"
-        className="mt-2 rounded-xl bg-primary px-5 py-2.5 text-[15px] font-medium text-bg"
-      >
-        Cadastrar cliente
-      </Link>
-    </div>
   );
 }
 

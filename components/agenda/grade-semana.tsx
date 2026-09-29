@@ -95,23 +95,24 @@ export function GradeSemana({
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex border-b border-border pl-11">
-        {dias.map((diaISO) => {
+        {dias.map((diaISO, indice) => {
           const data = new Date(`${diaISO}T12:00:00`);
           const ehHoje = diaISO === hojeISO;
           return (
             <button
               key={diaISO}
               type="button"
-              onClick={() => router.push(`/agenda?visao=dia&data=${diaISO}`)}
-              className="flex flex-1 flex-col items-center gap-0.5 py-2 text-center"
+              onClick={() => router.push(`/agenda?visao=dia&data=${diaISO}`, { scroll: false })}
+              style={{ "--i": indice } as React.CSSProperties}
+              className="surgir pressable flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 text-center active:bg-surface-alt"
             >
               <span className="text-[10px] font-medium text-text-muted">
                 {ABREV_DIA[data.getDay()]}
               </span>
               <span
                 className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-full text-[13px] font-medium",
-                  ehHoje ? "bg-primary text-bg" : "text-text",
+                  "flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-semibold",
+                  ehHoje ? "pop bg-primary text-bg shadow-(--shadow-md)" : "text-text",
                 )}
               >
                 {data.getDate()}
@@ -162,7 +163,10 @@ export function GradeSemana({
                       top: (minutos - inicioMin) * pxPorMin,
                       height: GRANULARIDADE_TAP_MIN * pxPorMin,
                     }}
-                    className={cn("absolute inset-x-0", !ocupado && "active:bg-surface-alt")}
+                    className={cn(
+                      "absolute inset-x-0.5 rounded-lg",
+                      !ocupado && "active:bg-primary-soft",
+                    )}
                   />
                 );
               })}

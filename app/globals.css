@@ -120,6 +120,19 @@
     color: var(--text);
     min-height: 100dvh;
     overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+
+  /* `scale` (e não `transform`) para não brigar com o motion, que anima transform. */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  label {
+    transition-property: color, background-color, border-color, box-shadow, scale;
+    transition-duration: 200ms;
+    transition-timing-function: var(--ease-out-ios);
   }
 
   /* Impede o zoom automático do iOS ao focar um campo */
@@ -140,5 +153,172 @@
   .no-select {
     -webkit-user-select: none;
     user-select: none;
+  }
+
+  .pressable:active:not(:disabled) {
+    scale: 0.97;
+  }
+
+  /* Entrada com stagger: `style={{ "--i": indice }}` no elemento. */
+  .surgir {
+    animation: surgir 420ms var(--ease-out-ios) backwards;
+    animation-delay: calc(min(var(--i, 0), 12) * 35ms);
+  }
+
+  .pop {
+    animation: pop 480ms var(--ease-spring) backwards;
+    animation-delay: calc(min(var(--i, 0), 12) * 35ms);
+  }
+
+  .crescer-x {
+    transform-origin: left;
+    animation: crescer-x 800ms var(--ease-out-ios) 150ms backwards;
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      100deg,
+      var(--surface-alt) 30%,
+      color-mix(in oklab, var(--surface-alt), var(--surface) 60%) 50%,
+      var(--surface-alt) 70%
+    );
+    background-size: 300% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes surgir {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes crescer-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   View Transitions entre telas — ver components/ui/tela.tsx
+   `avancar`/`voltar` vêm de `transitionTypes` nos links.
+   ═══════════════════════════════════════════════════════ */
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-old(.avancar) {
+  --deslocamento: -48px;
+  animation:
+    160ms ease-in both vt-fade reverse,
+    380ms var(--ease-out-ios) both vt-deslizar reverse;
+}
+::view-transition-new(.avancar) {
+  --deslocamento: 48px;
+  animation:
+    240ms ease-out 80ms both vt-fade,
+    380ms var(--ease-out-ios) both vt-deslizar;
+}
+::view-transition-old(.voltar) {
+  --deslocamento: 48px;
+  animation:
+    160ms ease-in both vt-fade reverse,
+    380ms var(--ease-out-ios) both vt-deslizar reverse;
+}
+::view-transition-new(.voltar) {
+  --deslocamento: -48px;
+  animation:
+    240ms ease-out 80ms both vt-fade,
+    380ms var(--ease-out-ios) both vt-deslizar;
+}
+
+::view-transition-old(.tela-sai) {
+  animation: 140ms ease-in both vt-fade reverse;
+}
+::view-transition-new(.tela-entra) {
+  animation:
+    260ms ease-out 60ms both vt-fade,
+    360ms var(--ease-out-ios) both vt-subir;
+}
+
+/* A barra de abas fica parada enquanto o conteúdo desliza por baixo. */
+::view-transition-group(barra-abas) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(barra-abas) {
+  display: none;
+}
+::view-transition-new(barra-abas) {
+  animation: none;
+}
+
+@keyframes vt-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes vt-deslizar {
+  from {
+    translate: var(--deslocamento) 0;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+@keyframes vt-subir {
+  from {
+    translate: 0 12px;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }

@@ -16,21 +16,50 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-bg/95 px-4 py-3 backdrop-blur",
+        "sticky top-0 z-30 flex h-15 shrink-0 items-center gap-2 bg-bg/85 px-4 backdrop-blur-xl",
         className,
       )}
     >
       {voltarPara && (
         <Link
           href={voltarPara}
-          className="no-select -ml-2 flex h-9 w-9 items-center justify-center rounded-full text-text active:bg-surface-alt"
+          transitionTypes={["voltar"]}
+          className="no-select pressable -ml-1.5 flex h-10 w-10 items-center justify-center rounded-full bg-surface text-text shadow-(--shadow-sm) active:bg-surface-alt"
           aria-label="Voltar"
         >
           <ChevronLeft size={22} />
         </Link>
       )}
-      <h1 className="flex-1 truncate text-[17px] font-semibold text-text">{titulo}</h1>
+      <h1
+        className={cn(
+          "flex-1 truncate font-bold tracking-tight text-text",
+          voltarPara ? "text-[18px]" : "text-[26px]",
+        )}
+      >
+        {titulo}
+      </h1>
       {acao}
     </header>
+  );
+}
+
+export function AcaoHeader({
+  href,
+  label,
+  children,
+}: {
+  href: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      transitionTypes={["avancar"]}
+      className="no-select pressable flex h-10 w-10 items-center justify-center rounded-full bg-primary text-bg shadow-(--shadow-md)"
+    >
+      {children}
+    </Link>
   );
 }

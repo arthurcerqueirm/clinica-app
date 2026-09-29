@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Wrench, MessageCircle, Bell, CalendarClock, ChevronRight } from "lucide-react";
+import { Tela } from "@/components/ui/tela";
 import { PageHeader } from "@/components/ui/page-header";
+import { Grupo, TituloSecao } from "@/components/ui/card";
 import { SeletorTema } from "@/components/ajustes/seletor-tema";
 
 const ITENS = [
@@ -32,32 +34,34 @@ const ITENS = [
 
 export default function AjustesPage() {
   return (
-    <div className="flex flex-1 flex-col">
+    <Tela>
       <PageHeader titulo="Ajustes" />
 
-      <p className="px-4 pt-4 pb-1 text-[13px] font-semibold uppercase tracking-wide text-text-muted">
-        Aparência
-      </p>
-      <SeletorTema />
+      <TituloSecao className="pt-1">Aparência</TituloSecao>
+      <div className="surgir px-4">
+        <SeletorTema />
+      </div>
 
-      <div className="mt-2 flex flex-col divide-y divide-border border-t border-border">
+      <TituloSecao>Configurações</TituloSecao>
+      <Grupo indice={1}>
         {ITENS.map((item) => (
           <Link
             key={item.href}
             href={item.href}
+            transitionTypes={["avancar"]}
             className="flex items-center gap-3 px-4 py-3.5 active:bg-surface-alt"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
               <item.icone size={19} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-medium text-text">{item.titulo}</p>
+              <p className="text-[15px] font-semibold text-text">{item.titulo}</p>
               <p className="truncate text-[13px] text-text-muted">{item.descricao}</p>
             </div>
-            <ChevronRight size={18} className="shrink-0 text-text-muted" />
+            <ChevronRight size={18} className="shrink-0 text-text-muted/60" />
           </Link>
         ))}
-      </div>
-    </div>
+      </Grupo>
+    </Tela>
   );
 }

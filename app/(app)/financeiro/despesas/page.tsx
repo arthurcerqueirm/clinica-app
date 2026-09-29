@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Plus } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { Tela } from "@/components/ui/tela";
+import { PageHeader, AcaoHeader } from "@/components/ui/page-header";
 import { DespesasList } from "@/components/financeiro/despesas-list";
 import {
   listarDespesas,
@@ -16,18 +16,14 @@ export default async function DespesasPage() {
   ]);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <Tela>
       <PageHeader
         titulo="Despesas"
         voltarPara="/financeiro"
         acao={
-          <Link
-            href="/financeiro/despesas/nova"
-            aria-label="Nova despesa"
-            className="no-select flex h-9 w-9 items-center justify-center rounded-full text-primary active:bg-surface-alt"
-          >
-            <Plus size={22} />
-          </Link>
+          <AcaoHeader href="/financeiro/despesas/nova" label="Nova despesa">
+            <Plus size={21} />
+          </AcaoHeader>
         }
       />
       <DespesasList
@@ -35,6 +31,6 @@ export default async function DespesasPage() {
         ocorrenciasPendentes={ocorrenciasPendentes}
         despesaIdsComOcorrenciaEsteMes={[...idsComOcorrencia]}
       />
-    </div>
+    </Tela>
   );
 }

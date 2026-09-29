@@ -2,8 +2,12 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
-import { ChevronUp, ChevronDown, Pencil } from "lucide-react";
+import { motion } from "motion/react";
+import { ChevronUp, ChevronDown, Pencil, Wrench } from "lucide-react";
+import { Grupo } from "@/components/ui/card";
+import { PlaceholderScreen } from "@/components/ui/placeholder-screen";
 import { formatarCentavos } from "@/lib/dinheiro";
+import { mola } from "@/lib/motion";
 import { alternarAtivoServicoAction, moverServicoAction } from "@/lib/actions/servicos";
 import type { Tables } from "@/types/database";
 
@@ -14,51 +18,57 @@ export function ServicosList({ servicos }: { servicos: Servico[] }) {
 
   if (servicos.length === 0) {
     return (
-      <p className="px-4 py-16 text-center text-sm text-text-muted">
-        Nenhum serviço cadastrado ainda.
-      </p>
+      <PlaceholderScreen
+        icone={Wrench}
+        titulo="Nenhum serviço cadastrado"
+        descricao="Toque no + para cadastrar as massagens oferecidas."
+      />
     );
   }
 
   return (
-    <div className="flex flex-col divide-y divide-border">
+    <Grupo className="mt-1">
       {servicos.map((servico, indice) => (
-        <div key={servico.id} className="flex items-center gap-3 px-4 py-3">
+        <motion.div
+          key={servico.id}
+          layout="position"
+          transition={mola}
+          className="flex items-center gap-3 bg-surface px-4 py-3"
+        >
           <span
-            className="h-9 w-1.5 shrink-0 rounded-full"
+            className="h-10 w-1.5 shrink-0 rounded-full"
             style={{ backgroundColor: servico.cor }}
             aria-hidden
           />
 
-          <div className={`min-w-0 flex-1 ${servico.ativo ? "" : "opacity-50"}`}>
-            <p className="truncate text-[15px] font-medium text-text">{servico.nome}</p>
+          <div
+            className={`min-w-0 flex-1 transition-opacity ${servico.ativo ? "" : "opacity-50"}`}
+          >
+            <p className="truncate text-[15px] font-semibold text-text">{servico.nome}</p>
             <p className="text-[13px] text-text-muted">
               {servico.duracao_min} min · {formatarCentavos(servico.preco_centavos)}
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
+          <div className="flex shrink-0 items-center gap-0.5">
+            <BotaoIcone
               disabled={indice === 0}
               onClick={() => startTransition(() => moverServicoAction(servico.id, "cima"))}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted disabled:opacity-30"
               aria-label="Mover para cima"
             >
               <ChevronUp size={18} />
-            </button>
-            <button
-              type="button"
+            </BotaoIcone>
+            <BotaoIcone
               disabled={indice === servicos.length - 1}
               onClick={() => startTransition(() => moverServicoAction(servico.id, "baixo"))}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted disabled:opacity-30"
               aria-label="Mover para baixo"
             >
               <ChevronDown size={18} />
-            </button>
+            </BotaoIcone>
             <Link
               href={`/ajustes/servicos/${servico.id}/editar`}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted"
+              transitionTypes={["avancar"]}
+              className="pressable flex h-9 w-9 items-center justify-center rounded-full text-text-muted active:bg-surface-alt"
               aria-label="Editar"
             >
               <Pencil size={16} />
@@ -68,13 +78,25 @@ export function ServicosList({ servicos }: { servicos: Servico[] }) {
               onClick={() =>
                 startTransition(() => alternarAtivoServicoAction(servico.id, !servico.ativo))
               }
-              className="ml-1 rounded-full border border-border px-2.5 py-1 text-[12px] font-medium text-text-muted"
+              className={`pressable ml-1 rounded-full px-3 py-1.5 text-[12px] font-semibold ${
+                servico.ativo ? "bg-success/10 text-success" : "bg-surface-alt text-text-muted"
+              }`}
             >
               {servico.ativo ? "Ativo" : "Inativo"}
             </button>
           </div>
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </Grupo>
+  );
+}
+
+function BotaoIcone(props: React.ComponentProps<"button">) {
+  return (
+    <button
+      type="button"
+      className="pressable flex h-9 w-9 items-center justify-center rounded-full text-text-muted active:bg-surface-alt disabled:opacity-30"
+      {...props}
+    />
   );
 }

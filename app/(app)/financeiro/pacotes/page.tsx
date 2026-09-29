@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Plus } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { Tela } from "@/components/ui/tela";
+import { PageHeader, AcaoHeader } from "@/components/ui/page-header";
 import { PacotesList } from "@/components/pacotes/pacotes-list";
 import { listarTodosPacotes } from "@/lib/data/pacotes";
 
@@ -8,21 +8,17 @@ export default async function PacotesPage() {
   const pacotes = await listarTodosPacotes();
 
   return (
-    <div className="flex flex-1 flex-col">
+    <Tela>
       <PageHeader
         titulo="Pacotes"
         voltarPara="/financeiro"
         acao={
-          <Link
-            href="/financeiro/pacotes/novo"
-            aria-label="Novo pacote"
-            className="no-select flex h-9 w-9 items-center justify-center rounded-full text-primary active:bg-surface-alt"
-          >
-            <Plus size={22} />
-          </Link>
+          <AcaoHeader href="/financeiro/pacotes/novo" label="Novo pacote">
+            <Plus size={21} />
+          </AcaoHeader>
         }
       />
       <PacotesList pacotes={pacotes} />
-    </div>
+    </Tela>
   );
 }

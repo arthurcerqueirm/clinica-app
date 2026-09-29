@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Drawer } from "vaul";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
+import { Sheet } from "@/components/ui/sheet";
+import { Input, Label, Aviso } from "@/components/ui/input";
 import { reaisParaCentavos } from "@/lib/dinheiro";
 import { criarCobrancaAvulsaAction } from "@/lib/actions/pagamentos";
 
@@ -39,51 +39,42 @@ export function NovaCobrancaAvulsaSheet({ clienteId }: { clienteId: string }) {
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="flex items-center gap-1.5 text-[13px] font-medium text-primary"
+        className="pressable flex items-center gap-1.5 rounded-full bg-primary-soft px-3.5 py-2 text-[13px] font-semibold text-primary"
       >
         <Plus size={15} />
         Nova cobrança
       </button>
 
-      <Drawer.Root open={aberto} onOpenChange={setAberto}>
-        <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/40" />
-          <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-surface p-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] outline-none">
-            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-border" />
-            <Drawer.Title className="text-[17px] font-semibold text-text">
-              Nova cobrança
-            </Drawer.Title>
+      <Sheet aberto={aberto} onOpenChange={setAberto} titulo="Nova cobrança">
+        <form action={criar} className="flex flex-col gap-3">
+          <div className="surgir" style={{ "--i": 1 } as React.CSSProperties}>
+            <Label htmlFor="descricao">Descrição *</Label>
+            <Input id="descricao" name="descricao" required autoFocus />
+          </div>
+          <div className="surgir" style={{ "--i": 2 } as React.CSSProperties}>
+            <Label htmlFor="valor_reais">Valor *</Label>
+            <Input
+              id="valor_reais"
+              name="valor_reais"
+              type="number"
+              inputMode="decimal"
+              min={0.01}
+              step="0.01"
+              required
+            />
+          </div>
+          <div className="surgir" style={{ "--i": 3 } as React.CSSProperties}>
+            <Label htmlFor="vencimento">Vencimento</Label>
+            <Input id="vencimento" name="vencimento" type="date" />
+          </div>
 
-            <form action={criar} className="mt-4 flex flex-col gap-3">
-              <div>
-                <Label htmlFor="descricao">Descrição *</Label>
-                <Input id="descricao" name="descricao" required autoFocus />
-              </div>
-              <div>
-                <Label htmlFor="valor_reais">Valor *</Label>
-                <Input
-                  id="valor_reais"
-                  name="valor_reais"
-                  type="number"
-                  min={0.01}
-                  step="0.01"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="vencimento">Vencimento</Label>
-                <Input id="vencimento" name="vencimento" type="date" />
-              </div>
+          {erro && <Aviso>{erro}</Aviso>}
 
-              {erro && <p className="text-[13px] text-danger">{erro}</p>}
-
-              <Button type="submit" disabled={pendente} className="mt-1 w-full">
-                {pendente ? "Criando..." : "Criar cobrança"}
-              </Button>
-            </form>
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
+          <Button type="submit" disabled={pendente} className="mt-1 w-full">
+            {pendente ? "Criando..." : "Criar cobrança"}
+          </Button>
+        </form>
+      </Sheet>
     </>
   );
 }

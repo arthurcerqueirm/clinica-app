@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Chip } from "@/components/ui/chip";
+import { Segmentado } from "@/components/ui/segmentado";
 import { aplicarTema, atualizarCorStatusBar, lerTemaSalvo, salvarTema, type Tema } from "@/lib/tema";
 
-const OPCOES: { valor: Tema; label: string }[] = [
+const OPCOES = [
   { valor: "sistema", label: "Sistema" },
   { valor: "claro", label: "Claro" },
   { valor: "escuro", label: "Escuro" },
-];
+] as const satisfies readonly { valor: Tema; label: string }[];
 
 export function SeletorTema() {
   const [tema, setTema] = useState<Tema | null>(null);
@@ -31,17 +31,5 @@ export function SeletorTema() {
     aplicarTema(novoTema);
   }
 
-  return (
-    <div className="flex gap-2 px-4 py-3.5">
-      {OPCOES.map((opcao) => (
-        <Chip
-          key={opcao.valor}
-          ativo={tema === opcao.valor}
-          onClick={() => escolher(opcao.valor)}
-        >
-          {opcao.label}
-        </Chip>
-      ))}
-    </div>
-  );
+  return <Segmentado id="tema" opcoes={OPCOES} valor={tema} onChange={escolher} />;
 }

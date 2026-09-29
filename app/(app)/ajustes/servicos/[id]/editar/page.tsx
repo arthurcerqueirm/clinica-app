@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Tela } from "@/components/ui/tela";
 import { PageHeader } from "@/components/ui/page-header";
 import { ServicoForm } from "@/components/servicos/servico-form";
 import { buscarServicoPorId } from "@/lib/data/servicos";
@@ -15,9 +16,9 @@ export default async function EditarServicoPage({
   const acao = atualizarServico.bind(null, id);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <Tela>
       <PageHeader titulo="Editar serviço" voltarPara="/ajustes/servicos" />
       <ServicoForm action={acao} servico={servico} textoBotao="Salvar alterações" />
-    </div>
+    </Tela>
   );
 }

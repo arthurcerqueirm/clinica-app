@@ -80,16 +80,18 @@ export function CalendarioMes({
                 <button
                   key={diaISO}
                   type="button"
-                  onClick={() => router.push(`/agenda?visao=dia&data=${diaISO}`)}
+                  onClick={() => router.push(`/agenda?visao=dia&data=${diaISO}`, { scroll: false })}
+                  style={{ "--i": indice } as React.CSSProperties}
                   className={cn(
-                    "flex flex-col items-center gap-1 rounded-lg py-1.5 active:bg-surface-alt",
+                    "surgir pressable flex flex-col items-center gap-1 rounded-2xl py-1.5 active:bg-primary-soft",
+                    doDia.length > 0 && noMes && "bg-surface shadow-(--shadow-sm)",
                     !noMes && "opacity-40",
                   )}
                 >
                   <span
                     className={cn(
-                      "flex h-6 w-6 items-center justify-center rounded-full text-[13px]",
-                      ehHoje ? "bg-primary text-bg font-medium" : "text-text",
+                      "flex h-7 w-7 items-center justify-center rounded-full text-[13px]",
+                      ehHoje ? "pop bg-primary font-semibold text-bg shadow-(--shadow-md)" : "text-text",
                     )}
                   >
                     {data.getDate()}

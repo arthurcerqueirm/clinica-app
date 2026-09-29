@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { QueryProvider } from "@/lib/providers/query-provider";
+import { MotionProvider } from "@/lib/providers/motion-provider";
 import { CORES_TEMA, SCRIPT_TEMA_INICIAL } from "@/lib/tema";
 import "./globals.css";
 
@@ -47,7 +48,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA_INICIAL }} />
       </head>
       <body className="flex min-h-full flex-col bg-bg text-text">
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          <MotionProvider>{children}</MotionProvider>
+        </QueryProvider>
       </body>
     </html>
   );

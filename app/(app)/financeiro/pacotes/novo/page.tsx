@@ -1,3 +1,4 @@
+import { Tela } from "@/components/ui/tela";
 import { PageHeader } from "@/components/ui/page-header";
 import { ConstrutorPacote } from "@/components/pacotes/construtor-pacote";
 import { createClient } from "@/lib/supabase/server";
@@ -27,7 +28,7 @@ export default async function NovoPacotePage({
     ]);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <Tela>
       <PageHeader
         titulo="Novo pacote"
         voltarPara={clientePreSelecionado ? `/clientes/${clientePreSelecionado.id}` : "/financeiro/pacotes"}
@@ -38,6 +39,6 @@ export default async function NovoPacotePage({
         modelos={modelos}
         clientePreSelecionado={clientePreSelecionado}
       />
-    </div>
+    </Tela>
   );
 }

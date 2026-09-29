@@ -27,15 +27,15 @@ export function BlocoAgendamento({
       <button
         type="button"
         onClick={() => setAberto(true)}
-        style={{ top, height: altura, backgroundColor: `${cor}1a`, borderColor: cor }}
+        style={{ top, height: altura, backgroundColor: `${cor}24`, borderColor: cor }}
         className={cn(
-          "absolute z-10 overflow-hidden rounded-md border-l-[3px] px-1.5 py-0.5 text-left leading-tight",
-          compacto ? "text-[10px]" : "text-[12px]",
+          "surgir pressable absolute z-10 overflow-hidden border-l-[3px] text-left leading-tight shadow-(--shadow-sm)",
+          compacto ? "rounded-md px-1 py-0.5 text-[10px]" : "rounded-xl px-2.5 py-1.5 text-[12px]",
           className,
         )}
       >
         {!compacto && (
-          <p className="truncate font-medium text-text">{agendamento.clientes?.nome ?? "Cliente"}</p>
+          <p className="truncate font-semibold text-text">{agendamento.clientes?.nome ?? "Cliente"}</p>
         )}
         <p className={cn("truncate text-text-muted", compacto && "font-medium text-text")}>
           {formatarHora(agendamento.inicio)}

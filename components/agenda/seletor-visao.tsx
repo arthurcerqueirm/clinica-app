@@ -1,30 +1,26 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Chip } from "@/components/ui/chip";
+import { Segmentado } from "@/components/ui/segmentado";
 import type { VisaoAgenda } from "@/lib/agenda-grade";
 
-const OPCOES: { valor: VisaoAgenda; label: string }[] = [
+const OPCOES = [
   { valor: "dia", label: "Dia" },
   { valor: "semana", label: "Semana" },
   { valor: "mes", label: "Mês" },
   { valor: "lista", label: "Lista" },
-];
+] as const satisfies readonly { valor: VisaoAgenda; label: string }[];
 
 export function SeletorVisao({ visao, dataISO }: { visao: VisaoAgenda; dataISO: string }) {
   const router = useRouter();
 
   return (
-    <div className="flex gap-2 overflow-x-auto px-4 pb-2">
-      {OPCOES.map((opcao) => (
-        <Chip
-          key={opcao.valor}
-          ativo={visao === opcao.valor}
-          onClick={() => router.push(`/agenda?visao=${opcao.valor}&data=${dataISO}`)}
-        >
-          {opcao.label}
-        </Chip>
-      ))}
-    </div>
+    <Segmentado
+      id="visao-agenda"
+      opcoes={OPCOES}
+      valor={visao}
+      onChange={(nova) => router.push(`/agenda?visao=${nova}&data=${dataISO}`, { scroll: false })}
+      className="mx-4"
+    />
   );
 }

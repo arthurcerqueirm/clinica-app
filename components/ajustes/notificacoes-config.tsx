@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { Bell, BellOff, Share, PlusSquare, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   ehIOS,
   ehStandalone,
@@ -106,11 +107,12 @@ export function NotificacoesConfig({ prefsIniciais }: { prefsIniciais: PrefsNoti
   }
 
   return (
-    <div className="flex flex-col gap-5 px-4 py-4">
-      <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="flex flex-col gap-4 px-4 py-3">
+      <div className="surgir rounded-2xl border border-border bg-surface p-4 shadow-(--shadow-sm)">
         <div className="flex items-center gap-3">
           <div
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+            key={status}
+            className={`pop flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
               status === "ativado" ? "bg-success/10 text-success" : "bg-surface-alt text-text-muted"
             }`}
           >
@@ -141,35 +143,37 @@ export function NotificacoesConfig({ prefsIniciais }: { prefsIniciais: PrefsNoti
             <button
               type="button"
               onClick={desativar}
-              className="text-[13px] font-medium text-danger"
+              className="pressable rounded-full py-2 text-[13px] font-semibold text-danger active:bg-danger/10"
             >
               Desativar
             </button>
           </div>
         )}
-        {mensagemTeste && <p className="mt-2 text-[13px] text-text-muted">{mensagemTeste}</p>}
+        {mensagemTeste && (
+          <p className="surgir mt-2 px-1 text-[13px] text-text-muted">{mensagemTeste}</p>
+        )}
 
         {status === "ios_nao_instalado" && <GuiaInstalacaoIOS />}
       </div>
 
       {status === "ativado" && (
-        <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-surface">
-          {TIPOS_NOTIFICACAO.map((tipo) => (
-            <label
+        <div className="surgir mx-0 flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface shadow-(--shadow-sm)">
+          {TIPOS_NOTIFICACAO.map((tipo, indice) => (
+            <div
               key={tipo.chave}
-              className="flex items-center justify-between gap-3 px-4 py-3.5"
+              style={{ "--i": indice + 1 } as React.CSSProperties}
+              className="surgir flex items-center justify-between gap-3 px-4 py-3.5"
             >
               <div className="min-w-0">
-                <p className="text-[14px] font-medium text-text">{tipo.label}</p>
+                <p className="text-[14px] font-semibold text-text">{tipo.label}</p>
                 <p className="text-[12px] text-text-muted">{tipo.desc}</p>
               </div>
-              <input
-                type="checkbox"
-                checked={prefs[tipo.chave]?.ativo ?? true}
-                onChange={(e) => alternarTipo(tipo.chave, e.target.checked)}
-                className="h-5 w-9 shrink-0 accent-primary"
+              <Switch
+                ativo={prefs[tipo.chave]?.ativo ?? true}
+                onChange={(ativo) => alternarTipo(tipo.chave, ativo)}
+                label={tipo.label}
               />
-            </label>
+            </div>
           ))}
         </div>
       )}
@@ -179,7 +183,7 @@ export function NotificacoesConfig({ prefsIniciais }: { prefsIniciais: PrefsNoti
 
 function GuiaInstalacaoIOS() {
   return (
-    <div className="mt-3 flex flex-col gap-2 rounded-xl bg-primary-soft p-3 text-[13px] text-text">
+    <div className="surgir mt-3 flex flex-col gap-2 rounded-2xl bg-primary-soft p-3.5 text-[13px] text-text">
       <p className="font-medium text-primary">Como instalar no iPhone:</p>
       <p className="flex items-center gap-1.5">
         1. Toque em <Share size={14} className="inline text-primary" /> (Compartilhar) no Safari

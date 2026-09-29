@@ -86,8 +86,8 @@ export function GradeDia({
               onClick={() => criarEm(minutos)}
               style={{ top: (minutos - inicioMin) * pxPorMin, height: GRANULARIDADE_TAP_MIN * pxPorMin }}
               className={cn(
-                "absolute inset-x-0 pl-14 text-left",
-                !ocupado && "active:bg-surface-alt",
+                "absolute left-13 right-2 rounded-xl text-left",
+                !ocupado && "active:bg-primary-soft",
               )}
             />
           );

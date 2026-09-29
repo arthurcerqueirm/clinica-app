@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Tela } from "@/components/ui/tela";
 import { PageHeader } from "@/components/ui/page-header";
 import { ClienteForm } from "@/components/clientes/cliente-form";
 import { buscarClientePorId } from "@/lib/data/clientes";
@@ -15,9 +16,9 @@ export default async function EditarClientePage({
   const acao = atualizarCliente.bind(null, id);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <Tela>
       <PageHeader titulo="Editar cliente" voltarPara={`/clientes/${id}`} />
       <ClienteForm action={acao} cliente={cliente} textoBotao="Salvar alterações" />
-    </div>
+    </Tela>
   );
 }

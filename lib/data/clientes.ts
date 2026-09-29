@@ -5,18 +5,12 @@ export type ClienteComResumo = {
   id: string;
   nome: string;
   telefone: string | null;
-  email: string | null;
-  data_nascimento: string | null;
-  restricoes_saude: string | null;
-  alergias: string | null;
-  preferencias: string | null;
   observacoes: string | null;
   como_conheceu: string | null;
   arquivado_em: string | null;
   saldoDevedor: number;
   temPacoteAtivo: boolean;
   ultimoAtendimento: string | null;
-  aniversarianteHoje: boolean;
 };
 
 export async function listarClientesComResumo(): Promise<ClienteComResumo[]> {
@@ -50,23 +44,12 @@ export async function listarClientesComResumo(): Promise<ClienteComResumo[]> {
     }
   }
 
-  const hoje = new Date();
-
   return (clientes ?? []).map((cliente) => ({
     ...cliente,
     saldoDevedor: saldoPorCliente.get(cliente.id) ?? 0,
     temPacoteAtivo: temPacoteAtivo.has(cliente.id),
     ultimoAtendimento: ultimoAtendimentoPorCliente.get(cliente.id) ?? null,
-    aniversarianteHoje: ehAniversarioHoje(cliente.data_nascimento, hoje),
   }));
-}
-
-function ehAniversarioHoje(dataNascimento: string | null, hoje: Date): boolean {
-  if (!dataNascimento) return false;
-  const partes = dataNascimento.split("-").map(Number);
-  const mes = partes[1];
-  const dia = partes[2];
-  return mes === hoje.getMonth() + 1 && dia === hoje.getDate();
 }
 
 export async function buscarClientePorId(id: string) {

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { HandCoins, Receipt, Package, ChevronRight } from "lucide-react";
+import { Tela } from "@/components/ui/tela";
 import { PageHeader } from "@/components/ui/page-header";
-import { Card } from "@/components/ui/card";
+import { Card, Grupo, TituloSecao } from "@/components/ui/card";
+import { CentavosAnimados } from "@/components/ui/numero-animado";
 import { EvolucaoChart } from "@/components/financeiro/evolucao-chart";
 import { buscarResumoMesAtual, buscarEvolucaoMensal, buscarProjecaoAgendada } from "@/lib/data/financeiro";
-import { formatarCentavos } from "@/lib/dinheiro";
 
 const LINKS = [
   { href: "/financeiro/inadimplentes", icone: HandCoins, titulo: "Quem está devendo" },
@@ -20,41 +21,45 @@ export default async function FinanceiroPage() {
   ]);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <Tela>
       <PageHeader titulo="Financeiro" />
 
-      <div className="flex flex-col gap-4 px-4 py-4">
-        <div>
-          <p className="text-[13px] text-text-muted">Este mês</p>
-        </div>
+      <div className="flex flex-col gap-3 px-4 pt-1">
+        <p className="surgir px-1 text-[13px] font-medium text-text-muted">Este mês</p>
 
         <div className="grid grid-cols-2 gap-3">
-          <Card>
+          <Card indice={1}>
             <p className="text-[13px] font-medium text-text-muted">Entradas</p>
-            <p className="mt-1 text-[18px] font-semibold text-text">
-              {formatarCentavos(resumo.entradas)}
-            </p>
+            <CentavosAnimados
+              valor={resumo.entradas}
+              className="mt-1 block text-[19px] font-bold text-text"
+            />
           </Card>
-          <Card>
+          <Card indice={2}>
             <p className="text-[13px] font-medium text-text-muted">Saídas</p>
-            <p className="mt-1 text-[18px] font-semibold text-text">
-              {formatarCentavos(resumo.saidas)}
-            </p>
+            <CentavosAnimados
+              valor={resumo.saidas}
+              className="mt-1 block text-[19px] font-bold text-text"
+            />
           </Card>
-          <Card>
+          <Card indice={3}>
             <p className="text-[13px] font-medium text-text-muted">Resultado</p>
-            <p
-              className={`mt-1 text-[18px] font-semibold ${resumo.resultado >= 0 ? "text-success" : "text-danger"}`}
-            >
-              {formatarCentavos(resumo.resultado)}
-            </p>
+            <CentavosAnimados
+              valor={resumo.resultado}
+              className={`mt-1 block text-[19px] font-bold ${resumo.resultado >= 0 ? "text-success" : "text-danger"}`}
+            />
           </Card>
-          <Link href="/financeiro/inadimplentes">
-            <Card className="active:bg-surface-alt">
+          <Link
+            href="/financeiro/inadimplentes"
+            transitionTypes={["avancar"]}
+            className="pressable rounded-2xl"
+          >
+            <Card indice={4} className="h-full active:bg-surface-alt">
               <p className="text-[13px] font-medium text-text-muted">A receber</p>
-              <p className="mt-1 text-[18px] font-semibold text-danger">
-                {formatarCentavos(resumo.aReceber)}
-              </p>
+              <CentavosAnimados
+                valor={resumo.aReceber}
+                className="mt-1 block text-[19px] font-bold text-danger"
+              />
               {resumo.clientesDevendo > 0 && (
                 <p className="mt-0.5 text-[12px] text-text-muted">
                   {resumo.clientesDevendo}{" "}
@@ -66,39 +71,42 @@ export default async function FinanceiroPage() {
         </div>
 
         {projecao > 0 && (
-          <Card className="bg-primary-soft">
+          <Card indice={5} className="border-primary/20 bg-primary-soft">
             <p className="text-[13px] font-medium text-primary">Projeção (agendado)</p>
-            <p className="mt-1 text-[16px] font-semibold text-primary">
-              {formatarCentavos(projecao)}
-            </p>
+            <CentavosAnimados
+              valor={projecao}
+              className="mt-1 block text-[17px] font-bold text-primary"
+            />
           </Card>
         )}
-
-        <div>
-          <p className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-text-muted">
-            Evolução — últimos 6 meses
-          </p>
-          <Card>
-            <EvolucaoChart dados={evolucao} />
-          </Card>
-        </div>
       </div>
 
-      <div className="flex flex-col divide-y divide-border border-t border-border">
+      <TituloSecao className="surgir" style={{ "--i": 6 } as React.CSSProperties}>
+        Evolução — últimos 6 meses
+      </TituloSecao>
+      <div className="px-4">
+        <Card indice={6}>
+          <EvolucaoChart dados={evolucao} />
+        </Card>
+      </div>
+
+      <TituloSecao>Gestão</TituloSecao>
+      <Grupo indice={7}>
         {LINKS.map((link) => (
           <Link
             key={link.href}
             href={link.href}
+            transitionTypes={["avancar"]}
             className="flex items-center gap-3 px-4 py-3.5 active:bg-surface-alt"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
               <link.icone size={19} />
             </div>
             <p className="flex-1 text-[15px] font-medium text-text">{link.titulo}</p>
-            <ChevronRight size={18} className="shrink-0 text-text-muted" />
+            <ChevronRight size={18} className="shrink-0 text-text-muted/60" />
           </Link>
         ))}
-      </div>
-    </div>
+      </Grupo>
+    </Tela>
   );
 }

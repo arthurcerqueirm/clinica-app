@@ -2,9 +2,10 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, type HTMLMotionProps } from "motion/react";
+import { AnimatePresence, motion, type HTMLMotionProps } from "motion/react";
 import { Delete } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { EASE_OUT_IOS, toque } from "@/lib/motion";
 import { TAMANHO_PIN } from "@/lib/auth/constantes";
 import { entrarComPinAction } from "@/lib/actions/auth";
 
@@ -52,42 +53,82 @@ export default function LoginPage() {
 
   return (
     <div className="safe-top flex min-h-dvh flex-col items-center justify-center bg-bg px-6">
-      <h1 className="mb-1 text-2xl font-semibold text-text">Clínica</h1>
-      <p className="mb-10 text-sm text-text-muted">Digite o PIN para entrar</p>
+      <div className="pop mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-bg shadow-(--shadow-lg)">
+        C
+      </div>
+      <h1
+        className="surgir mb-1 text-2xl font-bold tracking-tight text-text"
+        style={{ "--i": 1 } as React.CSSProperties}
+      >
+        Clínica
+      </h1>
+      <p
+        className="surgir mb-10 text-sm text-text-muted"
+        style={{ "--i": 2 } as React.CSSProperties}
+      >
+        Digite o PIN para entrar
+      </p>
 
       <motion.div
-        animate={erro ? { x: [0, -8, 8, -8, 8, 0] } : {}}
-        transition={{ duration: 0.4 }}
-        className="mb-6 flex gap-3"
+        animate={erro ? { x: [0, -10, 10, -8, 8, -4, 0] } : {}}
+        transition={{ duration: 0.45 }}
+        className="mb-6 flex gap-3.5"
       >
-        {Array.from({ length: TAMANHO_PIN }).map((_, indice) => (
-          <div
-            key={indice}
-            className={cn(
-              "h-3.5 w-3.5 rounded-full border-2 transition-colors",
-              erro
-                ? "border-danger"
-                : indice < pin.length
-                  ? "border-primary bg-primary"
-                  : "border-border bg-transparent",
-            )}
-          />
-        ))}
+        {Array.from({ length: TAMANHO_PIN }).map((_, indice) => {
+          const preenchido = indice < pin.length;
+          return (
+            <motion.div
+              key={indice}
+              animate={{ scale: preenchido ? [1, 1.35, 1] : 1 }}
+              transition={{ duration: 0.3, ease: EASE_OUT_IOS }}
+              className={cn(
+                "h-3.5 w-3.5 rounded-full border-2 transition-colors",
+                erro
+                  ? "border-danger bg-danger/20"
+                  : preenchido
+                    ? "border-primary bg-primary"
+                    : "border-border bg-transparent",
+              )}
+            />
+          );
+        })}
       </motion.div>
 
-      <p className="mb-6 h-5 text-sm text-danger">{erro ? "PIN incorreto" : ""}</p>
+      <AnimatePresence mode="wait">
+        <motion.p
+          key={erro ? "erro" : entrando ? "entrando" : "vazio"}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.18 }}
+          className={cn("mb-6 h-5 text-sm", erro ? "text-danger" : "text-text-muted")}
+        >
+          {erro ? "PIN incorreto" : entrando ? "Entrando..." : ""}
+        </motion.p>
+      </AnimatePresence>
 
       <div className="grid w-full max-w-70 grid-cols-3 gap-4">
-        {TECLAS.map((digito) => (
-          <TeclaPin key={digito} disabled={entrando} onClick={() => digitar(digito)}>
+        {TECLAS.map((digito, indice) => (
+          <TeclaPin
+            key={digito}
+            indice={indice + 3}
+            disabled={entrando}
+            onClick={() => digitar(digito)}
+          >
             {digito}
           </TeclaPin>
         ))}
         <div />
-        <TeclaPin disabled={entrando} onClick={() => digitar("0")}>
+        <TeclaPin indice={13} disabled={entrando} onClick={() => digitar("0")}>
           0
         </TeclaPin>
-        <TeclaPin disabled={entrando || pin.length === 0} onClick={apagar} aria-label="Apagar">
+        <TeclaPin
+          indice={14}
+          disabled={entrando || pin.length === 0}
+          onClick={apagar}
+          aria-label="Apagar"
+          className="bg-transparent"
+        >
           <Delete size={22} />
         </TeclaPin>
       </div>
@@ -95,14 +136,20 @@ export default function LoginPage() {
   );
 }
 
-function TeclaPin({ className, ...props }: HTMLMotionProps<"button">) {
+function TeclaPin({
+  className,
+  indice,
+  style,
+  ...props
+}: HTMLMotionProps<"button"> & { indice: number }) {
   return (
     <motion.button
       type="button"
-      whileTap={{ scale: 0.92 }}
-      transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+      whileTap={{ scale: 0.88 }}
+      transition={toque}
+      style={{ ...style, "--i": indice } as HTMLMotionProps<"button">["style"]}
       className={cn(
-        "no-select flex h-16 w-16 items-center justify-center justify-self-center rounded-full bg-surface-alt text-xl font-medium text-text disabled:opacity-40",
+        "no-select pop flex h-17 w-17 items-center justify-center justify-self-center rounded-full bg-surface text-2xl font-semibold text-text shadow-(--shadow-sm) active:bg-surface-alt disabled:opacity-40",
         className,
       )}
       {...props}

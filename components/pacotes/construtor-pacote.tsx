@@ -2,18 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 import { Plus, Minus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input, Select, Label, Textarea } from "@/components/ui/input";
+import { Input, Select, Label, Textarea, Aviso } from "@/components/ui/input";
 import { Chip } from "@/components/ui/chip";
-import { Card } from "@/components/ui/card";
+import { SecaoForm } from "@/components/ui/card";
+import { Segmentado } from "@/components/ui/segmentado";
+import { Switch } from "@/components/ui/switch";
+import { CentavosAnimados } from "@/components/ui/numero-animado";
 import { formatarCentavos, reaisParaCentavos } from "@/lib/dinheiro";
+import { mola, suave } from "@/lib/motion";
 import { criarPacoteAction } from "@/lib/actions/pacotes";
 import type { Tables, Enums } from "@/types/database";
 
 type Cliente = Pick<Tables<"clientes">, "id" | "nome">;
 type Servico = Tables<"servicos">;
 type Modelo = Tables<"pacote_modelos">;
+
+const TIPOS_DESCONTO = [
+  { valor: "percentual", label: "%" },
+  { valor: "valor", label: "R$" },
+] as const;
 
 type ItemBuilder = {
   servicoId: string;
@@ -142,11 +152,11 @@ export function ConstrutorPacote({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 py-4">
+    <div className="flex flex-col gap-4 px-4 py-3">
       {modelos.length > 0 && (
-        <div>
+        <div className="surgir">
           <Label>Usar modelo</Label>
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
             {modelos.map((modelo) => (
               <Chip key={modelo.id} onClick={() => aplicarModelo(modelo.id)}>
                 {modelo.nome}
@@ -156,80 +166,97 @@ export function ConstrutorPacote({
         </div>
       )}
 
-      {clientePreSelecionado ? (
-        <div>
-          <Label>Cliente</Label>
-          <p className="text-[15px] font-medium text-text">{clientePreSelecionado.nome}</p>
-        </div>
-      ) : (
-        <div>
-          <Label htmlFor="cliente">Cliente *</Label>
-          <Select id="cliente" value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
-            <option value="">Selecione...</option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nome}
-              </option>
-            ))}
-          </Select>
-        </div>
-      )}
+      <SecaoForm indice={1}>
+        {clientePreSelecionado ? (
+          <div>
+            <Label>Cliente</Label>
+            <p className="px-1 text-[15px] font-semibold text-text">{clientePreSelecionado.nome}</p>
+          </div>
+        ) : (
+          <div>
+            <Label htmlFor="cliente">Cliente *</Label>
+            <Select id="cliente" value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
+              <option value="">Selecione...</option>
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
 
-      <div>
-        <Label htmlFor="nome">Nome do pacote *</Label>
-        <Input
-          id="nome"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
-          placeholder="Pacote 10 sessões"
-        />
-      </div>
+        <div>
+          <Label htmlFor="nome">Nome do pacote *</Label>
+          <Input
+            id="nome"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Pacote 10 sessões"
+          />
+        </div>
+      </SecaoForm>
 
-      <div>
-        <p className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-text-muted">
-          Itens
-        </p>
+      <SecaoForm titulo="Itens" indice={2}>
         <div className="flex flex-col gap-2">
-          {itens.map((item) => (
-            <Card key={item.servicoId} className="flex items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[14px] font-medium text-text">{item.nome}</p>
-                <p className="text-[12px] text-text-muted">
-                  {formatarCentavos(item.precoUnitario)} cada
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => mudarQuantidade(item.servicoId, -1)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-text-muted"
-                >
-                  <Minus size={14} />
-                </button>
-                <span className="w-5 text-center text-[14px] font-medium text-text">
-                  {item.quantidade}
+          <AnimatePresence initial={false} mode="popLayout">
+            {itens.map((item) => (
+              <motion.div
+                key={item.servicoId}
+                layout
+                initial={{ opacity: 0, scale: 0.9, y: -8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, x: 40 }}
+                transition={mola}
+                className="flex items-center gap-3 rounded-2xl bg-surface-alt px-3.5 py-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] font-semibold text-text">{item.nome}</p>
+                  <p className="text-[12px] text-text-muted">
+                    {formatarCentavos(item.precoUnitario)} cada
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <BotaoQuantidade
+                    aria-label="Diminuir"
+                    onClick={() => mudarQuantidade(item.servicoId, -1)}
+                  >
+                    <Minus size={14} />
+                  </BotaoQuantidade>
+                  <span className="relative flex w-6 justify-center overflow-hidden text-[14px] font-bold text-text">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      <motion.span
+                        key={item.quantidade}
+                        initial={{ y: -12, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 12, opacity: 0 }}
+                        transition={mola}
+                      >
+                        {item.quantidade}
+                      </motion.span>
+                    </AnimatePresence>
+                  </span>
+                  <BotaoQuantidade
+                    aria-label="Aumentar"
+                    onClick={() => mudarQuantidade(item.servicoId, 1)}
+                  >
+                    <Plus size={14} />
+                  </BotaoQuantidade>
+                </div>
+                <span className="w-18 shrink-0 text-right text-[14px] font-bold text-text">
+                  {formatarCentavos(item.precoUnitario * item.quantidade)}
                 </span>
                 <button
                   type="button"
-                  onClick={() => mudarQuantidade(item.servicoId, 1)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-text-muted"
+                  onClick={() => removerItem(item.servicoId)}
+                  aria-label="Remover"
+                  className="pressable flex h-8 w-8 items-center justify-center rounded-full text-danger active:bg-danger/10"
                 >
-                  <Plus size={14} />
+                  <X size={16} />
                 </button>
-              </div>
-              <span className="w-20 shrink-0 text-right text-[14px] font-semibold text-text">
-                {formatarCentavos(item.precoUnitario * item.quantidade)}
-              </span>
-              <button
-                type="button"
-                onClick={() => removerItem(item.servicoId)}
-                aria-label="Remover"
-                className="text-danger"
-              >
-                <X size={16} />
-              </button>
-            </Card>
-          ))}
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {itens.length === 0 && (
             <p className="py-4 text-center text-[13px] text-text-muted">
@@ -240,11 +267,11 @@ export function ConstrutorPacote({
 
         {servicosDisponiveis.length > 0 && (
           <Select
-            className="mt-2"
             value=""
             onChange={(e) => {
               if (e.target.value) adicionarServico(e.target.value);
             }}
+            className="border-dashed text-primary"
           >
             <option value="">+ Adicionar serviço</option>
             {servicosDisponiveis.map((s) => (
@@ -254,88 +281,120 @@ export function ConstrutorPacote({
             ))}
           </Select>
         )}
-      </div>
+      </SecaoForm>
 
-      <Card className="flex flex-col gap-1.5">
-        <div className="flex justify-between text-[14px]">
+      <SecaoForm titulo="Valores" indice={3}>
+        <div className="flex justify-between px-1 text-[14px]">
           <span className="text-text-muted">Subtotal</span>
-          <span className="text-text">{formatarCentavos(subtotal)}</span>
+          <CentavosAnimados valor={subtotal} className="text-text" />
         </div>
 
-        <div className="flex items-center gap-2 py-1">
-          <Chip ativo={descontoTipo === "percentual"} onClick={() => setDescontoTipo("percentual")}>
-            %
-          </Chip>
-          <Chip ativo={descontoTipo === "valor"} onClick={() => setDescontoTipo("valor")}>
-            R$
-          </Chip>
+        <div className="flex items-center gap-2">
+          <Segmentado
+            id="tipo-desconto"
+            opcoes={TIPOS_DESCONTO}
+            valor={descontoTipo}
+            onChange={setDescontoTipo}
+            className="w-28 shrink-0"
+          />
           <Input
             type="number"
+            inputMode="decimal"
             min={0}
             step={descontoTipo === "percentual" ? 1 : 0.01}
             value={descontoValor || ""}
             onChange={(e) => setDescontoValor(Number(e.target.value))}
+            placeholder="Desconto"
             className="flex-1"
           />
         </div>
 
-        <div className="flex justify-between text-[14px]">
+        <div className="flex justify-between px-1 text-[14px]">
           <span className="text-text-muted">Desconto</span>
-          <span className="text-danger">− {formatarCentavos(descontoCentavos)}</span>
+          <span className="text-danger">
+            − <CentavosAnimados valor={descontoCentavos} />
+          </span>
         </div>
-        <div className="mt-1 flex justify-between border-t border-border pt-2 text-[16px] font-semibold">
+        <div className="flex justify-between border-t border-border px-1 pt-3 text-[18px] font-bold">
           <span className="text-text">Total</span>
-          <span className="text-text">{formatarCentavos(total)}</span>
+          <CentavosAnimados valor={total} className="text-text" />
         </div>
-        {descontoCentavos > 0 && (
-          <p className="text-[12px] text-success">
-            Economia de {formatarCentavos(descontoCentavos)} ({percentualEconomia.toFixed(0)}%)
-          </p>
-        )}
-      </Card>
+        <AnimatePresence>
+          {descontoCentavos > 0 && (
+            <motion.p
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={suave}
+              className="overflow-hidden rounded-full bg-success/10 px-3 py-1 text-center text-[12px] font-semibold text-success"
+            >
+              Economia de {formatarCentavos(descontoCentavos)} ({percentualEconomia.toFixed(0)}%)
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </SecaoForm>
 
-      <div>
-        <Label htmlFor="validade">Validade (opcional)</Label>
-        <Input
-          id="validade"
-          type="date"
-          value={validade}
-          onChange={(e) => setValidade(e.target.value)}
-        />
+      <SecaoForm indice={4}>
+        <div>
+          <Label htmlFor="validade">Validade (opcional)</Label>
+          <Input
+            id="validade"
+            type="date"
+            value={validade}
+            onChange={(e) => setValidade(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="observacoes">Observações</Label>
+          <Textarea
+            id="observacoes"
+            rows={2}
+            value={observacoes}
+            onChange={(e) => setObservacoes(e.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-3 px-1">
+          <span className="text-[14px] font-medium text-text">Salvar como modelo reutilizável</span>
+          <Switch ativo={salvarModelo} onChange={setSalvarModelo} label="Salvar como modelo" />
+        </div>
+        <AnimatePresence initial={false}>
+          {salvarModelo && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={suave}
+              className="-m-1 overflow-hidden p-1"
+            >
+              <Input
+                placeholder="Nome do modelo"
+                value={nomeModelo}
+                onChange={(e) => setNomeModelo(e.target.value)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </SecaoForm>
+
+      {erro && <Aviso>{erro}</Aviso>}
+
+      <div className="surgir" style={{ "--i": 5 } as React.CSSProperties}>
+        <Button disabled={enviando} onClick={confirmar} className="w-full">
+          {enviando ? "Criando..." : "Criar pacote"}
+        </Button>
       </div>
-
-      <div>
-        <Label htmlFor="observacoes">Observações</Label>
-        <Textarea
-          id="observacoes"
-          rows={2}
-          value={observacoes}
-          onChange={(e) => setObservacoes(e.target.value)}
-        />
-      </div>
-
-      <label className="flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
-        <input
-          type="checkbox"
-          checked={salvarModelo}
-          onChange={(e) => setSalvarModelo(e.target.checked)}
-          className="h-5 w-5 accent-primary"
-        />
-        <span className="text-[14px] text-text">Salvar como modelo reutilizável</span>
-      </label>
-      {salvarModelo && (
-        <Input
-          placeholder="Nome do modelo"
-          value={nomeModelo}
-          onChange={(e) => setNomeModelo(e.target.value)}
-        />
-      )}
-
-      {erro && <p className="rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">{erro}</p>}
-
-      <Button disabled={enviando} onClick={confirmar} className="w-full">
-        {enviando ? "Criando..." : "Criar pacote"}
-      </Button>
     </div>
+  );
+}
+
+function BotaoQuantidade(props: React.ComponentProps<"button">) {
+  return (
+    <button
+      type="button"
+      className="pressable flex h-8 w-8 items-center justify-center rounded-full bg-surface text-text-muted shadow-(--shadow-sm)"
+      {...props}
+    />
   );
 }

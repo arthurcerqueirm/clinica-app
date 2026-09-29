@@ -65,13 +65,12 @@ async function Conteudo({ visao, dataISO }: { visao: VisaoAgenda; dataISO: strin
     return <CalendarioMes dataISO={dataISO} agendamentos={agendamentos} />;
   }
 
-  const faixa = await buscarFaixaGradeAgenda();
+  const listar = visao === "semana" ? listarAgendamentosDaSemana : listarAgendamentosDoDia;
+  const [faixa, agendamentos] = await Promise.all([buscarFaixaGradeAgenda(), listar(dataISO)]);
 
   if (visao === "semana") {
-    const agendamentos = await listarAgendamentosDaSemana(dataISO);
     return <GradeSemana dataISO={dataISO} faixa={faixa} agendamentos={agendamentos} />;
   }
 
-  const agendamentos = await listarAgendamentosDoDia(dataISO);
   return <GradeDia dataISO={dataISO} faixa={faixa} agendamentos={agendamentos} />;
 }

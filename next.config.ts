@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
   // a página carrega mas o JavaScript nunca termina de "ligar" no navegador.
   // Ajustar se o IP do Wi-Fi do computador mudar (`ipconfig` / Configurações → Wi-Fi).
   allowedDevOrigins: ["192.168.40.54", "192.168.*.*"],
+  // Reaproveita no celular as telas já visitadas por 60s: voltar a uma aba é
+  // instantâneo. As server actions chamam revalidatePath, que limpa esse cache,
+  // então o que for salvo aparece na hora.
+  experimental: {
+    staleTimes: { dynamic: 60 },
+  },
 };
 
 const withSerwist = withSerwistInit({

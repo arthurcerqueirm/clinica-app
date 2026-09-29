@@ -35,10 +35,12 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Não remover: revalida o token e mantém a sessão viva a cada navegação.
-  let user = null;
+  // getClaims verifica a assinatura do JWT localmente (chaves assimétricas),
+  // sem a ida ao servidor de Auth que o getUser faz em toda navegação.
+  let user: { id: string } | null = null;
   try {
-    const { data } = await supabase.auth.getUser();
-    user = data.user;
+    const { data } = await supabase.auth.getClaims();
+    user = data?.claims.sub ? { id: data.claims.sub } : null;
   } catch {
     // Refresh token inválido/expirado (ex: cookie de uma sessão de antes de
     // trocar o e-mail/PIN de acesso) — trata como deslogada em vez de deixar
@@ -55,7 +57,7 @@ export async function updateSession(request: NextRequest) {
         email: process.env.DEV_AUTO_LOGIN_EMAIL!,
         password: process.env.DEV_AUTO_LOGIN_PASSWORD!,
       });
-      user = data.user;
+      user = data.user ? { id: data.user.id } : null;
     } catch {
       // segue deslogada — cai no redirect pra /login normal, abaixo.
     }

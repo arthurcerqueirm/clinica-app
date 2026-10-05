@@ -22,7 +22,6 @@ const ClienteSchema = z.object({
   nome: z.string().trim().min(1, "Nome é obrigatório"),
   telefone: telefoneVazioOuValido,
   observacoes: campoOpcional,
-  como_conheceu: campoOpcional,
 });
 
 function dadosDoFormulario(formData: FormData) {
@@ -30,7 +29,6 @@ function dadosDoFormulario(formData: FormData) {
     nome: formData.get("nome"),
     telefone: formData.get("telefone"),
     observacoes: formData.get("observacoes"),
-    como_conheceu: formData.get("como_conheceu"),
   };
 }
 

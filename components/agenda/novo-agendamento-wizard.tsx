@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Search, UserPlus, Package, ChevronLeft, ChevronRight } from "lucide-react";
-import { Chip } from "@/components/ui/chip";
+import { Search, UserPlus, Package, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { Input, Textarea, Label, Aviso } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { mola, suave } from "@/lib/motion";
+import { cn } from "@/lib/cn";
 import { formatarCentavos } from "@/lib/dinheiro";
 import { formatarData, hojeISOemSaoPaulo } from "@/lib/datas";
 import { normalizarTexto } from "@/lib/texto";
@@ -23,7 +23,7 @@ type ClienteResumido = Pick<Tables<"clientes">, "id" | "nome" | "telefone">;
 type Servico = Tables<"servicos">;
 type Credito = Tables<"vw_creditos_pacote">;
 
-const ETAPAS = ["cliente", "servico", "data", "horario", "confirmar"] as const;
+const ETAPAS = ["cliente", "servico", "quando", "confirmar"] as const;
 type Etapa = (typeof ETAPAS)[number];
 
 export function NovoAgendamentoWizard({
@@ -54,8 +54,8 @@ export function NovoAgendamentoWizard({
   const [usarCredito, setUsarCredito] = useState(false);
   const [dataISO, setDataISO] = useState(dataInicial);
   const [horario, setHorario] = useState<string | null>(null);
-  const [slots, setSlots] = useState<string[]>([]);
-  const [carregandoSlots, setCarregandoSlots] = useState(false);
+  // Cache por dia+duração: trocar de dia e voltar não refaz a busca.
+  const [cacheSlots, setCacheSlots] = useState<Record<string, string[]>>({});
   const [horarioSugeridoPendente, setHorarioSugeridoPendente] = useState(Boolean(horarioSugerido));
   const [avisoHorarioIndisponivel, setAvisoHorarioIndisponivel] = useState<string | null>(null);
   const [observacoes, setObservacoes] = useState("");
@@ -69,24 +69,25 @@ export function NovoAgendamentoWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const chaveSlots = servico ? `${dataISO}|${servico.duracao_min}` : null;
+  const slots = chaveSlots ? cacheSlots[chaveSlots] : undefined;
+
   useEffect(() => {
-    if (etapa !== "horario" || !servico) return;
-    buscarSlotsLivresAction(dataISO, servico.duracao_min)
-      .then((novosSlots) => {
-        setSlots(novosSlots);
-        if (horarioSugeridoPendente && horarioSugerido) {
-          setHorarioSugeridoPendente(false);
-          if (novosSlots.includes(horarioSugerido)) {
-            setHorario(horarioSugerido);
-            setDirecao(1);
-            setEtapaBruta("confirmar");
-          } else {
-            setAvisoHorarioIndisponivel(horarioSugerido);
-          }
+    if (etapa !== "quando" || !servico || !chaveSlots || cacheSlots[chaveSlots]) return;
+    buscarSlotsLivresAction(dataISO, servico.duracao_min).then((novosSlots) => {
+      setCacheSlots((atual) => ({ ...atual, [chaveSlots]: novosSlots }));
+      if (horarioSugeridoPendente && horarioSugerido) {
+        setHorarioSugeridoPendente(false);
+        if (novosSlots.includes(horarioSugerido)) {
+          setHorario(horarioSugerido);
+          setDirecao(1);
+          setEtapaBruta("confirmar");
+        } else {
+          setAvisoHorarioIndisponivel(horarioSugerido);
         }
-      })
-      .finally(() => setCarregandoSlots(false));
-  }, [etapa, servico, dataISO, horarioSugeridoPendente, horarioSugerido]);
+      }
+    });
+  }, [etapa, servico, dataISO, chaveSlots, cacheSlots, horarioSugeridoPendente, horarioSugerido]);
 
   const creditoDoServico = useMemo(
     () => creditos.find((c) => c.servico_id === servico?.id),
@@ -104,15 +105,13 @@ export function NovoAgendamentoWizard({
     setServico(selecionado);
     const credito = creditos.find((c) => c.servico_id === selecionado.id);
     setUsarCredito(Boolean(credito));
-    setEtapa("data");
+    setEtapa("quando");
   }
 
   function selecionarData(novaData: string) {
     setDataISO(novaData);
     setHorario(null);
-    setCarregandoSlots(true);
     setAvisoHorarioIndisponivel(null);
-    setEtapa("horario");
   }
 
   function selecionarHorario(novoHorario: string) {
@@ -188,22 +187,15 @@ export function NovoAgendamentoWizard({
         />
       )}
 
-      {etapa === "data" && (
-        <EtapaData
-          dataAtual={dataISO}
-          onSelecionar={selecionarData}
-          onVoltar={() => setEtapa("servico")}
-        />
-      )}
-
-      {etapa === "horario" && (
-        <EtapaHorario
+      {etapa === "quando" && (
+        <EtapaQuando
           dataISO={dataISO}
           slots={slots}
-          carregando={carregandoSlots}
+          horarioSelecionado={horario}
           avisoIndisponivel={avisoHorarioIndisponivel}
-          onSelecionar={selecionarHorario}
-          onVoltar={() => setEtapa("data")}
+          onSelecionarData={selecionarData}
+          onSelecionarHorario={selecionarHorario}
+          onVoltar={() => setEtapa("servico")}
         />
       )}
 
@@ -221,7 +213,7 @@ export function NovoAgendamentoWizard({
           erro={erro}
           enviando={enviando}
           onConfirmar={confirmar}
-          onVoltar={() => setEtapa("horario")}
+          onVoltar={() => setEtapa("quando")}
         />
       )}
           </motion.div>
@@ -370,101 +362,202 @@ function EtapaServico({
   );
 }
 
-function EtapaData({
-  dataAtual,
-  onSelecionar,
-  onVoltar,
-}: {
-  dataAtual: string;
-  onSelecionar: (data: string) => void;
-  onVoltar: () => void;
-}) {
-  const hoje = hojeISOemSaoPaulo();
-  const amanha = new Date(`${hoje}T12:00:00`);
-  amanha.setDate(amanha.getDate() + 1);
-  const amanhaISO = amanha.toISOString().slice(0, 10);
+const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const DIAS_NA_FAIXA = 60;
+const PERIODOS = [
+  { label: "Manhã", ate: "12:00" },
+  { label: "Tarde", ate: "18:00" },
+  { label: "Noite", ate: "24:00" },
+];
 
-  return (
-    <div className="flex flex-1 flex-col gap-3">
-      <CabecalhoEtapa titulo="3. Data" onVoltar={onVoltar} />
-      <div className="surgir flex gap-2">
-        <Chip grupo="data-wizard" ativo={dataAtual === hoje} onClick={() => onSelecionar(hoje)}>
-          Hoje
-        </Chip>
-        <Chip
-          grupo="data-wizard"
-          ativo={dataAtual === amanhaISO}
-          onClick={() => onSelecionar(amanhaISO)}
-        >
-          Amanhã
-        </Chip>
-      </div>
-      <div className="surgir" style={{ "--i": 1 } as React.CSSProperties}>
-        <Label htmlFor="data-customizada">Ou escolha uma data</Label>
-        <Input
-          id="data-customizada"
-          type="date"
-          min={hoje}
-          value={dataAtual}
-          onChange={(event) => event.target.value && onSelecionar(event.target.value)}
-        />
-      </div>
-    </div>
+// Aritmética de datas de calendário (yyyy-MM-dd) em UTC ao meio-dia, para não
+// depender do fuso do aparelho.
+function somarDias(dataISO: string, dias: number): string {
+  const data = new Date(`${dataISO}T12:00:00Z`);
+  data.setUTCDate(data.getUTCDate() + dias);
+  return data.toISOString().slice(0, 10);
+}
+
+function diasEntre(deISO: string, ateISO: string): number {
+  return Math.round(
+    (Date.parse(`${ateISO}T12:00:00Z`) - Date.parse(`${deISO}T12:00:00Z`)) / 86_400_000,
   );
 }
 
-function EtapaHorario({
+function EtapaQuando({
   dataISO,
   slots,
-  carregando,
+  horarioSelecionado,
   avisoIndisponivel,
-  onSelecionar,
+  onSelecionarData,
+  onSelecionarHorario,
   onVoltar,
 }: {
   dataISO: string;
-  slots: string[];
-  carregando: boolean;
+  slots: string[] | undefined;
+  horarioSelecionado: string | null;
   avisoIndisponivel?: string | null;
-  onSelecionar: (horario: string) => void;
+  onSelecionarData: (data: string) => void;
+  onSelecionarHorario: (horario: string) => void;
   onVoltar: () => void;
 }) {
+  const hoje = hojeISOemSaoPaulo();
+  const inicioFaixa = dataISO < hoje ? dataISO : hoje;
+  const totalDias = Math.max(DIAS_NA_FAIXA, diasEntre(inicioFaixa, dataISO) + 14);
+
+  const dias = useMemo(
+    () => Array.from({ length: totalDias }, (_, i) => somarDias(inicioFaixa, i)),
+    [inicioFaixa, totalDias],
+  );
+
+  const diaSelecionadoRef = useRef<HTMLButtonElement>(null);
+  const primeiraRolagem = useRef(true);
+  useEffect(() => {
+    diaSelecionadoRef.current?.scrollIntoView({
+      behavior: primeiraRolagem.current ? "auto" : "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+    primeiraRolagem.current = false;
+  }, [dataISO]);
+
+  const periodos = useMemo(() => {
+    if (!slots) return [];
+    let de = "00:00";
+    return PERIODOS.map((periodo) => {
+      const doPeriodo = slots.filter((slot) => slot >= de && slot < periodo.ate);
+      de = periodo.ate;
+      return { label: periodo.label, slots: doPeriodo };
+    }).filter((periodo) => periodo.slots.length > 0);
+  }, [slots]);
+
   return (
     <div className="flex flex-1 flex-col gap-3">
       <CabecalhoEtapa
-        titulo="4. Horário"
-        subtitulo={formatarData(`${dataISO}T12:00:00`)}
+        titulo="3. Quando"
+        subtitulo={formatarData(`${dataISO}T12:00:00`, "EEEE, dd 'de' MMMM")}
         onVoltar={onVoltar}
       />
-      {avisoIndisponivel && !carregando && (
+
+      <div className="surgir -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
+        <label className="pressable relative flex h-17 w-13 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-border bg-surface text-text-muted">
+          <CalendarDays size={18} />
+          <span className="text-[10px] font-semibold">Outra</span>
+          <input
+            type="date"
+            aria-label="Escolher outra data"
+            min={hoje}
+            value={dataISO}
+            onClick={(event) => {
+              try {
+                event.currentTarget.showPicker();
+              } catch {
+                // Navegador sem showPicker: o toque no input já abre o seletor nativo.
+              }
+            }}
+            onChange={(event) => event.target.value && onSelecionarData(event.target.value)}
+            className="absolute inset-0 cursor-pointer opacity-0"
+          />
+        </label>
+
+        {dias.map((dia) => {
+          const ativo = dia === dataISO;
+          const data = new Date(`${dia}T12:00:00Z`);
+          return (
+            <button
+              key={dia}
+              ref={ativo ? diaSelecionadoRef : undefined}
+              type="button"
+              onClick={() => onSelecionarData(dia)}
+              className={cn(
+                "pressable relative flex h-17 w-13 shrink-0 flex-col items-center justify-center rounded-2xl border",
+                ativo ? "border-primary text-bg" : "border-border bg-surface text-text",
+              )}
+            >
+              {ativo && (
+                <motion.span
+                  layoutId="dia-wizard"
+                  transition={mola}
+                  className="absolute -inset-px rounded-2xl bg-primary"
+                />
+              )}
+              <span className={cn("relative text-[11px] font-semibold", !ativo && "text-text-muted")}>
+                {dia === hoje ? "Hoje" : DIAS_SEMANA[data.getUTCDay()]}
+              </span>
+              <span className="relative text-[19px] leading-tight font-bold">
+                {data.getUTCDate()}
+              </span>
+              <span className={cn("relative text-[10px]", !ativo && "text-text-muted")}>
+                {MESES[data.getUTCMonth()]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {avisoIndisponivel && slots && (
         <Aviso tipo="alerta">
           Horário sugerido ({avisoIndisponivel}) não está mais disponível. Escolha outro:
         </Aviso>
       )}
-      {carregando ? (
-        <div className="grid grid-cols-4 gap-2">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <Skeleton key={i} className="h-11 rounded-full" />
-          ))}
-        </div>
-      ) : slots.length === 0 ? (
-        <p className="surgir py-8 text-center text-sm text-text-muted">
-          Nenhum horário livre nesse dia. Escolha outra data.
-        </p>
-      ) : (
-        <div className="grid grid-cols-4 gap-2">
-          {slots.map((slot, indice) => (
-            <button
-              key={slot}
-              type="button"
-              onClick={() => onSelecionar(slot)}
-              style={{ "--i": indice } as React.CSSProperties}
-              className="pop pressable h-11 rounded-full border border-border bg-surface text-center text-[14px] font-semibold text-text shadow-(--shadow-sm) active:border-primary active:bg-primary active:text-bg"
-            >
-              {slot}
-            </button>
-          ))}
-        </div>
-      )}
+
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={slots ? dataISO : "carregando"}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="flex flex-col gap-4"
+        >
+          {!slots ? (
+            <div className="grid grid-cols-4 gap-2 pt-6">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <Skeleton key={i} className="h-11 rounded-full" />
+              ))}
+            </div>
+          ) : periodos.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <p className="text-center text-sm text-text-muted">Nenhum horário livre nesse dia.</p>
+              <button
+                type="button"
+                onClick={() => onSelecionarData(somarDias(dataISO, 1))}
+                className="pressable flex items-center gap-0.5 rounded-full bg-primary-soft py-2 pr-3 pl-4 text-[13px] font-semibold text-primary"
+              >
+                Ver próximo dia
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          ) : (
+            periodos.map((periodo) => (
+              <div key={periodo.label} className="flex flex-col gap-2">
+                <p className="px-1 text-[12px] font-semibold uppercase tracking-wide text-text-muted">
+                  {periodo.label}
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {periodo.slots.map((slot, indice) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => onSelecionarHorario(slot)}
+                      style={{ "--i": indice } as React.CSSProperties}
+                      className={cn(
+                        "pop pressable h-11 rounded-full border text-center text-[14px] font-semibold shadow-(--shadow-sm) active:border-primary active:bg-primary active:text-bg",
+                        slot === horarioSelecionado
+                          ? "border-primary bg-primary text-bg"
+                          : "border-border bg-surface text-text",
+                      )}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
@@ -500,7 +593,7 @@ function EtapaConfirmar({
 }) {
   return (
     <div className="flex flex-1 flex-col gap-3">
-      <CabecalhoEtapa titulo="5. Confirmar" onVoltar={onVoltar} />
+      <CabecalhoEtapa titulo="4. Confirmar" onVoltar={onVoltar} />
 
       <Card className="flex flex-col gap-2.5">
         <Linha label="Cliente" valor={cliente.nome} />

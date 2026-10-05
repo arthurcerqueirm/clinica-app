@@ -6,7 +6,6 @@ export type ClienteComResumo = {
   nome: string;
   telefone: string | null;
   observacoes: string | null;
-  como_conheceu: string | null;
   arquivado_em: string | null;
   saldoDevedor: number;
   temPacoteAtivo: boolean;

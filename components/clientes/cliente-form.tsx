@@ -47,15 +47,7 @@ export function ClienteForm({
         </div>
       </SecaoForm>
 
-      <SecaoForm titulo="Outros" indice={1}>
-        <div>
-          <Label htmlFor="como_conheceu">Como conheceu</Label>
-          <Input
-            id="como_conheceu"
-            name="como_conheceu"
-            defaultValue={cliente?.como_conheceu ?? ""}
-          />
-        </div>
+      <SecaoForm indice={1}>
         <div>
           <Label htmlFor="observacoes">Observações</Label>
           <Textarea

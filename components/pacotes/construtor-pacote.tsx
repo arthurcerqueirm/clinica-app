@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Plus, Minus, X } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Select, Label, Textarea, Aviso } from "@/components/ui/input";
 import { Chip } from "@/components/ui/chip";
@@ -11,7 +11,8 @@ import { SecaoForm } from "@/components/ui/card";
 import { Segmentado } from "@/components/ui/segmentado";
 import { Switch } from "@/components/ui/switch";
 import { CentavosAnimados } from "@/components/ui/numero-animado";
-import { formatarCentavos, reaisParaCentavos } from "@/lib/dinheiro";
+import { cn } from "@/lib/cn";
+import { formatarCentavos, reaisParaCentavos, centavosParaReais } from "@/lib/dinheiro";
 import { mola, suave } from "@/lib/motion";
 import { criarPacoteAction } from "@/lib/actions/pacotes";
 import type { Tables, Enums } from "@/types/database";
@@ -25,12 +26,8 @@ const TIPOS_DESCONTO = [
   { valor: "valor", label: "R$" },
 ] as const;
 
-type ItemBuilder = {
-  servicoId: string;
-  nome: string;
-  precoUnitario: number;
-  quantidade: number;
-};
+// Padrão da clínica: cada sessão do pacote sai R$ 20 mais barata que a avulsa.
+const DESCONTO_PADRAO_POR_SESSAO_CENTAVOS = 2000;
 
 export function ConstrutorPacote({
   clientes,
@@ -45,9 +42,9 @@ export function ConstrutorPacote({
 }) {
   const router = useRouter();
   const [clienteId, setClienteId] = useState(clientePreSelecionado?.id ?? "");
-  const [nome, setNome] = useState("");
-  const [itens, setItens] = useState<ItemBuilder[]>([]);
-  const [descontoTipo, setDescontoTipo] = useState<Enums<"tipo_desconto">>("percentual");
+  const [quantidades, setQuantidades] = useState<Record<string, number>>({});
+  const [descontoPersonalizado, setDescontoPersonalizado] = useState(false);
+  const [descontoTipo, setDescontoTipo] = useState<Enums<"tipo_desconto">>("valor");
   const [descontoValor, setDescontoValor] = useState(0);
   const [validade, setValidade] = useState("");
   const [observacoes, setObservacoes] = useState("");
@@ -56,41 +53,37 @@ export function ConstrutorPacote({
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const servicosDisponiveis = servicos.filter((s) => !itens.some((i) => i.servicoId === s.id));
+  const itens = servicos
+    .filter((s) => (quantidades[s.id] ?? 0) > 0)
+    .map((s) => ({ servico: s, quantidade: quantidades[s.id] }));
 
-  const subtotal = itens.reduce((soma, i) => soma + i.precoUnitario * i.quantidade, 0);
-  const descontoBruto =
-    descontoTipo === "percentual"
+  const totalSessoes = itens.reduce((soma, i) => soma + i.quantidade, 0);
+  const subtotal = itens.reduce((soma, i) => soma + i.servico.preco_centavos * i.quantidade, 0);
+  const descontoPadrao = itens.reduce(
+    (soma, i) =>
+      soma + Math.min(DESCONTO_PADRAO_POR_SESSAO_CENTAVOS, i.servico.preco_centavos) * i.quantidade,
+    0,
+  );
+  const descontoBruto = !descontoPersonalizado
+    ? descontoPadrao
+    : descontoTipo === "percentual"
       ? Math.round(subtotal * (descontoValor / 100))
       : reaisParaCentavos(descontoValor || 0);
   const descontoCentavos = Math.min(Math.max(descontoBruto, 0), subtotal);
   const total = subtotal - descontoCentavos;
   const percentualEconomia = subtotal > 0 ? (descontoCentavos / subtotal) * 100 : 0;
 
-  function adicionarServico(servicoId: string) {
-    const servico = servicos.find((s) => s.id === servicoId);
-    if (!servico) return;
-    setItens((atual) => [
-      ...atual,
-      {
-        servicoId: servico.id,
-        nome: servico.nome,
-        precoUnitario: servico.preco_centavos,
-        quantidade: 1,
-      },
-    ]);
-  }
-
   function mudarQuantidade(servicoId: string, delta: number) {
-    setItens((atual) =>
-      atual.map((i) =>
-        i.servicoId === servicoId ? { ...i, quantidade: Math.max(1, i.quantidade + delta) } : i,
-      ),
-    );
+    setQuantidades((atual) => ({
+      ...atual,
+      [servicoId]: Math.max(0, (atual[servicoId] ?? 0) + delta),
+    }));
   }
 
-  function removerItem(servicoId: string) {
-    setItens((atual) => atual.filter((i) => i.servicoId !== servicoId));
+  function personalizarDesconto() {
+    setDescontoTipo("valor");
+    setDescontoValor(centavosParaReais(descontoPadrao));
+    setDescontoPersonalizado(true);
   }
 
   function aplicarModelo(modeloId: string) {
@@ -98,23 +91,12 @@ export function ConstrutorPacote({
     if (!modelo) return;
 
     const itensModelo = modelo.itens as { servico_id: string; quantidade: number }[];
-    const novosItens: ItemBuilder[] = [];
-    for (const item of itensModelo) {
-      const servico = servicos.find((s) => s.id === item.servico_id);
-      if (servico) {
-        novosItens.push({
-          servicoId: servico.id,
-          nome: servico.nome,
-          precoUnitario: servico.preco_centavos,
-          quantidade: item.quantidade,
-        });
-      }
-    }
-
-    setItens(novosItens);
+    setQuantidades(
+      Object.fromEntries(itensModelo.map((item) => [item.servico_id, item.quantidade])),
+    );
     setDescontoTipo(modelo.desconto_tipo);
     setDescontoValor(Number(modelo.desconto_valor));
-    setNome(modelo.nome);
+    setDescontoPersonalizado(true);
   }
 
   async function confirmar() {
@@ -124,11 +106,7 @@ export function ConstrutorPacote({
       return;
     }
     if (itens.length === 0) {
-      setErro("Adicione pelo menos um serviço.");
-      return;
-    }
-    if (!nome.trim()) {
-      setErro("Dê um nome para o pacote.");
+      setErro("Adicione pelo menos uma massagem.");
       return;
     }
 
@@ -136,10 +114,9 @@ export function ConstrutorPacote({
     try {
       await criarPacoteAction({
         clienteId,
-        nome,
-        itens: itens.map((i) => ({ servicoId: i.servicoId, quantidade: i.quantidade })),
-        descontoTipo,
-        descontoValor,
+        itens: itens.map((i) => ({ servicoId: i.servico.id, quantidade: i.quantidade })),
+        descontoTipo: descontoPersonalizado ? descontoTipo : "valor",
+        descontoValor: descontoPersonalizado ? descontoValor : centavosParaReais(descontoPadrao),
         validade: validade || undefined,
         observacoes,
         salvarComoModelo: salvarModelo ? nomeModelo : undefined,
@@ -185,136 +162,150 @@ export function ConstrutorPacote({
             </Select>
           </div>
         )}
-
-        <div>
-          <Label htmlFor="nome">Nome do pacote *</Label>
-          <Input
-            id="nome"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Pacote 10 sessões"
-          />
-        </div>
       </SecaoForm>
 
-      <SecaoForm titulo="Itens" indice={2}>
+      <SecaoForm titulo="Massagens" indice={2}>
         <div className="flex flex-col gap-2">
-          <AnimatePresence initial={false} mode="popLayout">
-            {itens.map((item) => (
-              <motion.div
-                key={item.servicoId}
-                layout
-                initial={{ opacity: 0, scale: 0.9, y: -8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, x: 40 }}
-                transition={mola}
-                className="flex items-center gap-3 rounded-2xl bg-surface-alt px-3.5 py-3"
+          {servicos.map((servico) => {
+            const quantidade = quantidades[servico.id] ?? 0;
+            const selecionado = quantidade > 0;
+            return (
+              <div
+                key={servico.id}
+                role={selecionado ? undefined : "button"}
+                tabIndex={selecionado ? undefined : 0}
+                onClick={selecionado ? undefined : () => mudarQuantidade(servico.id, 1)}
+                onKeyDown={
+                  selecionado
+                    ? undefined
+                    : (e) => {
+                        if (e.key === "Enter" || e.key === " ") mudarQuantidade(servico.id, 1);
+                      }
+                }
+                className={cn(
+                  "flex items-center gap-3 rounded-2xl border px-3.5 py-3 transition-colors",
+                  selecionado
+                    ? "border-primary/40 bg-primary-soft"
+                    : "pressable cursor-pointer border-border bg-surface-alt",
+                )}
               >
+                <span
+                  className="h-9 w-1.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: servico.cor }}
+                  aria-hidden
+                />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14px] font-semibold text-text">{item.nome}</p>
+                  <p className="truncate text-[14px] font-semibold text-text">{servico.nome}</p>
                   <p className="text-[12px] text-text-muted">
-                    {formatarCentavos(item.precoUnitario)} cada
+                    {selecionado
+                      ? `${quantidade} × ${formatarCentavos(servico.preco_centavos)} = ${formatarCentavos(servico.preco_centavos * quantidade)}`
+                      : `${formatarCentavos(servico.preco_centavos)} avulsa`}
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <BotaoQuantidade
-                    aria-label="Diminuir"
-                    onClick={() => mudarQuantidade(item.servicoId, -1)}
-                  >
-                    <Minus size={14} />
-                  </BotaoQuantidade>
-                  <span className="relative flex w-6 justify-center overflow-hidden text-[14px] font-bold text-text">
-                    <AnimatePresence mode="popLayout" initial={false}>
-                      <motion.span
-                        key={item.quantidade}
-                        initial={{ y: -12, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: 12, opacity: 0 }}
-                        transition={mola}
-                      >
-                        {item.quantidade}
-                      </motion.span>
-                    </AnimatePresence>
-                  </span>
-                  <BotaoQuantidade
-                    aria-label="Aumentar"
-                    onClick={() => mudarQuantidade(item.servicoId, 1)}
-                  >
-                    <Plus size={14} />
-                  </BotaoQuantidade>
-                </div>
-                <span className="w-18 shrink-0 text-right text-[14px] font-bold text-text">
-                  {formatarCentavos(item.precoUnitario * item.quantidade)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removerItem(item.servicoId)}
-                  aria-label="Remover"
-                  className="pressable flex h-8 w-8 items-center justify-center rounded-full text-danger active:bg-danger/10"
-                >
-                  <X size={16} />
-                </button>
-              </motion.div>
-            ))}
-          </AnimatePresence>
 
-          {itens.length === 0 && (
+                {selecionado ? (
+                  <div className="flex items-center gap-1.5">
+                    <BotaoQuantidade
+                      aria-label={`Diminuir ${servico.nome}`}
+                      onClick={() => mudarQuantidade(servico.id, -1)}
+                    >
+                      <Minus size={14} />
+                    </BotaoQuantidade>
+                    <span className="relative flex w-6 justify-center overflow-hidden text-[15px] font-bold text-text">
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        <motion.span
+                          key={quantidade}
+                          initial={{ y: -12, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          exit={{ y: 12, opacity: 0 }}
+                          transition={mola}
+                        >
+                          {quantidade}
+                        </motion.span>
+                      </AnimatePresence>
+                    </span>
+                    <BotaoQuantidade
+                      aria-label={`Aumentar ${servico.nome}`}
+                      onClick={() => mudarQuantidade(servico.id, 1)}
+                    >
+                      <Plus size={14} />
+                    </BotaoQuantidade>
+                  </div>
+                ) : (
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-primary">
+                    <Plus size={16} />
+                  </span>
+                )}
+              </div>
+            );
+          })}
+
+          {servicos.length === 0 && (
             <p className="py-4 text-center text-[13px] text-text-muted">
-              Nenhum serviço adicionado.
+              Nenhuma massagem cadastrada em Ajustes → Serviços.
             </p>
           )}
         </div>
-
-        {servicosDisponiveis.length > 0 && (
-          <Select
-            value=""
-            onChange={(e) => {
-              if (e.target.value) adicionarServico(e.target.value);
-            }}
-            className="border-dashed text-primary"
-          >
-            <option value="">+ Adicionar serviço</option>
-            {servicosDisponiveis.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nome} — {formatarCentavos(s.preco_centavos)}
-              </option>
-            ))}
-          </Select>
-        )}
       </SecaoForm>
 
       <SecaoForm titulo="Valores" indice={3}>
         <div className="flex justify-between px-1 text-[14px]">
-          <span className="text-text-muted">Subtotal</span>
+          <span className="text-text-muted">
+            Subtotal{totalSessoes > 0 && ` · ${totalSessoes} ${totalSessoes === 1 ? "sessão" : "sessões"}`}
+          </span>
           <CentavosAnimados valor={subtotal} className="text-text" />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Segmentado
-            id="tipo-desconto"
-            opcoes={TIPOS_DESCONTO}
-            valor={descontoTipo}
-            onChange={setDescontoTipo}
-            className="w-28 shrink-0"
-          />
-          <Input
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step={descontoTipo === "percentual" ? 1 : 0.01}
-            value={descontoValor || ""}
-            onChange={(e) => setDescontoValor(Number(e.target.value))}
-            placeholder="Desconto"
-            className="flex-1"
-          />
-        </div>
-
-        <div className="flex justify-between px-1 text-[14px]">
-          <span className="text-text-muted">Desconto</span>
+        <div className="flex items-start justify-between gap-3 px-1 text-[14px]">
+          <div className="flex flex-col">
+            <span className="text-text-muted">Desconto</span>
+            <button
+              type="button"
+              onClick={
+                descontoPersonalizado ? () => setDescontoPersonalizado(false) : personalizarDesconto
+              }
+              className="self-start text-[12px] font-semibold text-primary"
+            >
+              {descontoPersonalizado ? "Voltar ao padrão (R$ 20/sessão)" : "R$ 20 por sessão · Alterar"}
+            </button>
+          </div>
           <span className="text-danger">
             − <CentavosAnimados valor={descontoCentavos} />
           </span>
         </div>
+
+        <AnimatePresence initial={false}>
+          {descontoPersonalizado && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={suave}
+              className="-m-1 overflow-hidden p-1"
+            >
+              <div className="flex items-center gap-2">
+                <Segmentado
+                  id="tipo-desconto"
+                  opcoes={TIPOS_DESCONTO}
+                  valor={descontoTipo}
+                  onChange={setDescontoTipo}
+                  className="w-28 shrink-0"
+                />
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step={descontoTipo === "percentual" ? 1 : 0.01}
+                  value={descontoValor || ""}
+                  onChange={(e) => setDescontoValor(Number(e.target.value))}
+                  placeholder="Desconto"
+                  className="flex-1"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="flex justify-between border-t border-border px-1 pt-3 text-[18px] font-bold">
           <span className="text-text">Total</span>
           <CentavosAnimados valor={total} className="text-text" />

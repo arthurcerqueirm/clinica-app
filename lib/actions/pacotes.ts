@@ -14,7 +14,6 @@ export type ItemPacoteInput = { servicoId: string; quantidade: number };
 
 export type EntradaCriarPacote = {
   clienteId: string;
-  nome: string;
   itens: ItemPacoteInput[];
   descontoTipo: Enums<"tipo_desconto">;
   descontoValor: number;
@@ -25,7 +24,6 @@ export type EntradaCriarPacote = {
 
 export async function criarPacoteAction(input: EntradaCriarPacote) {
   if (input.itens.length === 0) throw new Error("Adicione pelo menos um serviço.");
-  if (!input.nome.trim()) throw new Error("Dê um nome para o pacote.");
 
   const supabase = await createClient();
 
@@ -40,6 +38,7 @@ export async function criarPacoteAction(input: EntradaCriarPacote) {
   if (erroServicos || !servicos) throw new Error("Não foi possível carregar os serviços.");
 
   const precoPorServico = new Map(servicos.map((s) => [s.id, s.preco_centavos]));
+  const nomePorServico = new Map(servicos.map((s) => [s.id, s.nome]));
 
   const itensComValor = input.itens.map((item) => {
     const precoUnitario = precoPorServico.get(item.servicoId);
@@ -60,13 +59,18 @@ export async function criarPacoteAction(input: EntradaCriarPacote) {
 
   const valorFinalCentavos = valorBrutoCentavos - descontoTotalCentavos;
 
+  // Sem campo de nome na tela: o pacote se descreve pelo que contém (ex: "10× Relaxante").
+  const nome = itensComValor
+    .map((item) => `${item.quantidade}× ${nomePorServico.get(item.servicoId)}`)
+    .join(" + ");
+
   const descontosPorItem = ratearDesconto(itensComValor, descontoTotalCentavos);
 
   const { data: pacote, error: erroPacote } = await supabase
     .from("pacotes")
     .insert({
       cliente_id: input.clienteId,
-      nome: input.nome.trim(),
+      nome,
       valor_bruto_centavos: valorBrutoCentavos,
       desconto_tipo: input.descontoTipo,
       desconto_valor: input.descontoValor,
@@ -97,7 +101,7 @@ export async function criarPacoteAction(input: EntradaCriarPacote) {
     cliente_id: input.clienteId,
     origem_tipo: "pacote",
     pacote_id: pacote.id,
-    descricao: input.nome.trim(),
+    descricao: `Pacote: ${nome}`,
     valor_centavos: valorFinalCentavos,
   });
   if (erroCobranca) throw new Error("Pacote criado, mas não foi possível gerar a cobrança.");
